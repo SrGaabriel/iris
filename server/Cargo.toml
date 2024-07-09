@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = { version = "0.7.5", features = ["ws"] }
+axum = { version = "0.7.5", features = ["ws", "macros"] }
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-tungstenite = "0.23.1"
@@ -12,10 +12,23 @@ headers = "0.4"
 futures = "0.3.30"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 tower = { version = "0.4", features = ["util"] }
-tower-http = { version = "0.5.0", features = ["fs", "trace"] }
+tower-http = { version = "0.5.0", features = ["fs", "trace", "add-extension", "cors"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 prost = "^0.13"
 prost-types="^0.13"
 prost-build="^0.13"
+
+serde = { version = "^1.0", features = ["derive"] }
+serde_json = "^1.0"
+
+diesel = { version = "2.2.1", features = ["postgres", "r2d2"] }
+tokio-postgres = "0.7.10"
+
+dotenvy= "0.15.7"
+jwt= "0.16.0"
+hmac= "0.12.1"
+sha2= "0.10.8"
+argon2 = "0.5.3"
+rand = "0.8.5"

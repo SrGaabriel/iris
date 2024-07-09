@@ -3,6 +3,7 @@
 
 ### dotenv ###
 .env
+*.env
 
 ### Intellij+all ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
@@ -12,7 +13,7 @@
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
-.idea/**/dictionaries
+.idea/m run**/dictionaries
 .idea/**/shelf
 
 # AWS User-specific

@@ -1,7 +1,4 @@
 <script lang="ts">
-    export const ssr = false;
-    export const prerender = false;
-
     import {onMount} from "svelte";
     import server from "../interaction/server.ts"
 
@@ -15,6 +12,7 @@
     }
 
     onMount(() => {
+        server.connect();
         server.subscribe((currentMessage) => {
             messages = [...messages, currentMessage];
         });
