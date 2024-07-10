@@ -5,6 +5,8 @@
     const redirect = urlParams.get('redirect');
 
     async function submit() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect');
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 

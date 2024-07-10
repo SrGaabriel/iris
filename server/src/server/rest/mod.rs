@@ -5,7 +5,9 @@ use serde::Serialize;
 use crate::entity::user::User;
 
 pub mod auth;
+pub mod contacts;
 pub mod user;
+pub mod middlewares;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 
@@ -41,6 +43,23 @@ impl From<User> for UserSelfResponse {
             name: user.name,
             username: user.username,
             email: user.email
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct ContactResponse {
+    pub id: i64,
+    pub name: String,
+    pub username: String
+}
+
+impl From<&User> for ContactResponse {
+    fn from(user: &User) -> Self {
+        ContactResponse {
+            id: user.id,
+            name: String::from(&user.name),
+            username: String::from(&user.username)
         }
     }
 }

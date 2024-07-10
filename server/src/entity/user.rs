@@ -1,6 +1,6 @@
 use diesel::{Insertable, Queryable, Selectable};
 
-#[derive(Debug, Queryable, Selectable, Insertable)]
+#[derive(Debug, Queryable, Selectable, Insertable, Clone)]
 #[diesel(table_name = users)]
 #[diesel(primary_key(id))]
 pub struct User {
@@ -14,9 +14,9 @@ pub struct User {
 diesel::table! {
     users (id) {
         id -> BigInt,
+        name -> Varchar,
         username -> Varchar,
-        password -> Varchar,
         email -> Varchar,
-        name -> Varchar
+        password -> Varchar
     }
 }

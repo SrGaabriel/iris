@@ -7,12 +7,8 @@ use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use argon2::Argon2;
 use argon2::password_hash::SaltString;
-use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
+use axum::{extract::ws::{Message, WebSocket, WebSocketUpgrade}, response::IntoResponse, routing::get, Router, middleware};
+use axum::body::Body;
 use axum::middleware::AddExtension;
 use axum::routing::post;
 use diesel::PgConnection;
@@ -24,10 +20,12 @@ use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tower_http::add_extension::AddExtensionLayer;
+use tower_http::auth::{AsyncRequireAuthorizationLayer, AsyncAuthorizeRequest};
 use tower_http::cors::CorsLayer;
 use tracing::Subscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::entity::user::User;
+use crate::server::rest::middlewares::{authorize, IrisAuth};
 
 #[tokio::main]
 async fn main() {
@@ -55,6 +53,11 @@ async fn main() {
         .init();
 
     let app = Router::new()
+        .route("/api/users/@me", get(server::rest::user::get_self))
+        .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
+        .route_layer(
+            middleware::from_fn(authorize)
+        )
         .route("/login", post(server::rest::auth::login))
         .route("/signup", post(server::rest::auth::register))
         .route("/api/users/@me", get(server::rest::user::get_self))
