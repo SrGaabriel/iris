@@ -57,6 +57,7 @@ async fn main() {
     let app = Router::new()
         .route("/login", post(server::rest::auth::login))
         .route("/signup", post(server::rest::auth::register))
+        .route("/api/users/@me", get(server::rest::user::get_self))
         .route("/ws", get(server::subscribe_chat_handshake))
         .layer(CorsLayer::permissive())
         .layer(

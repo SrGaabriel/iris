@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::entity::user::User;
 
 pub mod auth;
+pub mod user;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 

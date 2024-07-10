@@ -1,6 +1,9 @@
 <script lang="ts">
     import {DOMAIN} from "../../interaction/server.ts";
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect');
+
     async function submit() {
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
@@ -16,7 +19,13 @@
         const result = document.getElementById('result');
         if (response.ok) {
             const data = await response.json();
+            document.cookie = `token=${data.token}`;
             result.innerText = `Login successful, you are ${data.user.name} (@${data.user.username}), with ID ${data.user.id} and email ${data.user.email}, your token is ${data.token}`;
+            if (redirect) {
+                window.location.href = redirect;
+            } else {
+                window.location.href = '/app';
+            }
         } else {
             result.innerText = 'Login failed';
         }

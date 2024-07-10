@@ -37,7 +37,7 @@ pub async fn subscribe_chat_handshake(
 }
 
 pub async fn subscribe_chat(application: SharedState, mut ws: WebSocket, addr: SocketAddr) {
-    let mut receiver_task = tokio::spawn(async move {
+    tokio::spawn(async move {
         let mut count = 0;
         while let Some(message) = ws.recv().await {
             if message.is_err() {
