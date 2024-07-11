@@ -9,17 +9,19 @@
 
     let messages: any[] = [];
     let typingMessage = '';
+    let messagesElement: any;
 
     onMount(() => {
+        messagesElement = document.querySelector('.messages');
         store.subscribe((message) => {
-            console.log("at last");
+            console.log("at last")
             if (!message) return;
             if (message.context === user.id) {
                 const newMessage = {
                     ...message, user_id: message.userId
                 }
-                console.log(newMessage);
                 messages = [...messages, newMessage];
+                messagesElement.scrollTo(0, messagesElement.scrollHeight);
             }
         });
         fetch(`${API}/api/messages/${contact.id}`, {
@@ -29,13 +31,15 @@
             }
         }).then((request) => request.json()).then((messageList) => {
             messages = messageList;
-            window.scrollTo(0, 999999);
+        }).then(() => {
+            messagesElement.scrollTo(0, messagesElement.scrollHeight);
         }).catch((error) => {
             console.error(error);
         });
     })
 
     function submit() {
+        messagesElement.scrollTo(0, messagesElement.scrollHeight);
         fetch(`${API}/api/messages/${contact.id}`, {
             method: 'POST',
             headers: {
@@ -47,6 +51,10 @@
         }).then(response => response.text()).then((text) => JSONbig.parse(text)).then((message) => {
             messages = [...messages, message];
             typingMessage = '';
+        }).then(() => {
+            messagesElement.scrollTo(0, messagesElement.scrollHeight);
+        }).catch((error) => {
+            console.error(error);
         });
     }
 
@@ -64,18 +72,20 @@
         <h1>{contact?.name}</h1>
     </div>
     <div class="messages">
-        {#each messages as message}
-            {@const sender = getUserObject(message.user_id)}
-            {@const sent = sender.id === user.id}
-            <div class="message-container {sent ? 'sent' : 'received'}">
-                <div class="message-sender">
-                    <span class="message-sender-name">{sender.name}</span>
+        <div class="messages-container">
+            {#each messages as message}
+                {@const sender = getUserObject(message.user_id)}
+                {@const sent = sender.id === user.id}
+                <div class="message-container {sent ? 'sent' : 'received'}">
+                    <div class="message-sender">
+                        <span class="message-sender-name">{sender.name}</span>
+                    </div>
+                    <div class="message-text-container">
+                        <span class={`message ${sent ? 'sent' : 'received'}`}>{message.content}</span>
+                    </div>
                 </div>
-                <div class="message-text-container">
-                    <span class={`message ${sent ? 'sent' : 'received'}`}>{message.content}</span>
-                </div>
-            </div>
-        {/each}
+            {/each}
+        </div>
     </div>
     <input type="text" placeholder="Type a message..." bind:value={typingMessage}/>
     <button on:click={() => submit()}>Send</button>
@@ -88,7 +98,6 @@
         width: 100%;
         height: 100%;
     }
-
     .header {
         width: 100%;
         height: 75px;
@@ -97,10 +106,17 @@
     }
     .messages {
         display: flex;
-        flex-direction: column;
+        justify-content: center;
         width: 100%;
         height: 100%;
         box-shadow: 4px 4px 6px black;
+        overflow: scroll;
+    }
+    .messages-container {
+        display: flex;
+        flex-direction: column;
+        width: 75%;
+        margin-bottom: 20px;
     }
     .message-container {
         display: flex;
@@ -109,7 +125,7 @@
         gap: 4px;
     }
     .message-container.sent {
-        margin-left: 400px !important;
+        align-items: flex-end;
     }
     .message-container.received {
         align-items: flex-start;
@@ -117,17 +133,22 @@
     .message {
         color: #2b2b2b;
         display: inline-block;
-        padding: 6px 12px;
+        padding: 10px 18px;
         border-radius: 64px;
         width: auto;
+        max-width: 400px;
         font-family: 'DM Sans', sans-serif;
         font-size: 17px;
+        text-wrap: normal;
+        word-wrap: normal;
+        overflow-wrap: normal;
+        word-break: break-word;
     }
     .message.sent {
         background-color: #50aed2;
     }
     .message.received {
-        background-color: gray;
+        background-color: #bcbcbc;
     }
     .message-sender-name {
         font-family: 'DM Sans', sans-serif;

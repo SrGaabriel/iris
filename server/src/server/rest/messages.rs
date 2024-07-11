@@ -31,15 +31,16 @@ pub async fn create_message(
     let message: Json<MessageCreationRequest> = message.unwrap();
 
     let mut state = state.write().await;
-    let connection = &mut state.database;
+    let id: i64 = { state.snowflake_issuer.generate().value() as i64 };
     let new_message = Message {
-        id: random(),
+        id,
         user_id: user.id,
         content: message.0.content.clone(),
         context: contact_id,
-        context_type: 0
+        context_type: 0,
     };
 
+    let connection = &mut state.database;
     let inserted_message = diesel::insert_into(messages)
         .values(&new_message)
         .get_result::<Message>(connection)
@@ -82,10 +83,6 @@ pub async fn get_messages(
             (user_id.eq(user.id).and(context.eq(contact_id)))
                 .or(user_id.eq(contact_id).and(context.eq(user.id)))
         );
-    // If you are using a specific backend, for example, PostgreSQL
-    println!("Query: {}", debug_query::<diesel::pg::Pg, _>(&query));
-
-    // Execute the query as before
     let bilateral_messages = query.load::<Message>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| PrivateMessage::from(m)).collect())

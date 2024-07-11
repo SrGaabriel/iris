@@ -1,6 +1,7 @@
 mod server;
 mod entity;
 mod database;
+mod util;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -30,6 +31,7 @@ use tracing::Subscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::entity::user::User;
 use crate::server::rest::middlewares::{authorize, IrisAuth};
+use crate::util::snowflake::SnowflakeIssuer;
 
 #[tokio::main]
 async fn main() {
@@ -45,7 +47,8 @@ async fn main() {
         database: database_connection,
         jwt_key: key,
         argon: Argon2::default(),
-        argon_salt: salt
+        argon_salt: salt,
+        snowflake_issuer: SnowflakeIssuer::new(1,1)
     };
 
     tracing_subscriber::registry()
@@ -94,7 +97,8 @@ pub struct AppState {
     pub database: PgConnection,
     pub jwt_key: Hmac<Sha256>,
     pub argon: Argon2<'static>,
-    pub argon_salt: SaltString
+    pub argon_salt: SaltString,
+    pub snowflake_issuer: SnowflakeIssuer
 }
 
 unsafe impl Sync for AppState {}

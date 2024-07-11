@@ -13,7 +13,7 @@ let socket: WebSocket;
 function connect(token: string) {
     if (browser) {
         loadProto();
-        socket = new WebSocket(`${WEBSOCKET}/ws`, token);
+        socket = new WebSocket(`${WEBSOCKET}/ws`, ['Token', token]);
 
         socket.addEventListener('open', () => {
             console.log('Connected to server');

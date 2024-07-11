@@ -47,12 +47,11 @@ pub async fn register(
     Json(request): Json<RegisterRequest>,
 ) -> IrisResponse<UserAuthResponse> {
     let state = &mut state.write().await;
-    println!("Request password: {}", request.password);
+    let id = { state.snowflake_issuer.generate().value() as i64 };
     let hashed_password = state.argon.hash_password(request.password.as_bytes(), &state.argon_salt).expect("Failed to hash password");
-    println!("Hashed password: {}", hashed_password);
 
     let new_user = User {
-        id: random(),
+        id,
         name: request.name.clone(),
         username: request.username.clone(),
         password: hashed_password.to_string(),
