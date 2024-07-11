@@ -1,0 +1,9 @@
+syntax="proto3";
+package messages;
+
+message TextMessage {
+  int64 id = 1;
+  string content = 2;
+  int64 user_id = 3;
+  int64 context = 4;
+}

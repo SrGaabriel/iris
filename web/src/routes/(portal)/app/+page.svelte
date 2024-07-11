@@ -1,19 +1,27 @@
 <script lang="ts">
     import Contact from "$lib/components/Contact.svelte";
     import {onMount} from "svelte";
-    import {DOMAIN} from "../../../interaction/server.ts";
+    import server, {API} from "../../../interaction/server.ts";
+    import Chat from "$lib/components/Chat.svelte";
+    import {writable} from "svelte/store";
 
     export let data;
     let contacts: any[] = [];
+    $: selectedContact = null;
+    let messageStore = writable();
 
     onMount(() => {
-        fetch(`http://${DOMAIN}/api/contacts/@me`, {
+        fetch(`${API}/api/contacts/@me`, {
             method: 'GET',
             headers: {
                 'Authorization': 'Bearer ' + data.token
             }
-        }).then(response => response.json()).then(contact_list => {
+        }).then(response => response.text()).then((text) => JSONbig.parse(text)).then(contact_list => {
             contacts = contact_list;
+        });
+        server.connect(data.token);
+        server.subscribe((message) => {
+            messageStore.set(message);
         });
     })
 </script>
@@ -21,16 +29,18 @@
 <div class="page">
     <div class="contacts">
         <div class="self">
-
+            <p>{data.user.name}</p>
         </div>
         {#each contacts as contact}
-            <Contact name={contact.name} text="Start a conversation" hour="10:00am" picture="/assets/no_profile_picture.jpg"/>
+            <Contact user={contact} text="Start a conversation" hour="10:00am" picture="/assets/no_profile_picture.jpg" bind:selected={selectedContact}/>
         {/each}
     </div>
     <main class="block">
-        <div class="current-chat">
-            <h1>{data.user.name}</h1>
-        </div>
+        {#if selectedContact}
+            {#key selectedContact.id.toString()}
+                <Chat user={data.user} bind:contact={selectedContact} store={messageStore} token={data.token}/>
+            {/key}
+        {/if}
     </main>
 </div>
 

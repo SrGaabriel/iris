@@ -1,5 +1,5 @@
 import {redirect} from "@sveltejs/kit";
-import {DOMAIN} from "../../interaction/server.ts";
+import {API} from "../../interaction/server.ts";
 import type {Self} from "$lib/user.ts";
 
 export async function load({ cookies, url }) {
@@ -10,7 +10,7 @@ export async function load({ cookies, url }) {
     if (!token) {
         throw redirect(303, `/login?redirect=${url.pathname}`);
     }
-    const response = await fetch(`http://${DOMAIN}/api/users/@me`, {
+    const response = await fetch(`${API}/api/users/@me`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }

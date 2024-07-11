@@ -16,6 +16,9 @@ tower-http = { version = "0.5.0", features = ["fs", "trace", "add-extension", "c
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 http-body-util = "0.1.2"
+chrono="0.4.38"
+crossbeam = "0.8.4"
+dashmap = "6.0.1"
 
 prost = "^0.13"
 prost-types="^0.13"

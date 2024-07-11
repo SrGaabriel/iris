@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {DOMAIN} from "../../interaction/server.ts";
+    import {API} from "../../interaction/server.ts";
 
     async function submit() {
         const name = (document.getElementById('name') as HTMLInputElement).value;
@@ -7,7 +7,7 @@
         const username = (document.getElementById('username') as HTMLInputElement).value;
         const password = (document.getElementById('password') as HTMLInputElement).value;
 
-        const response = await fetch(`http://${DOMAIN}/signup`, {
+        const response = await fetch(`${API}/signup`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

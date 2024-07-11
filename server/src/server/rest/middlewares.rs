@@ -21,7 +21,7 @@ pub struct IrisAuth;
 
 pub async fn authorize(mut req: Request, next: Next) -> Response {
     let headers = req.headers().clone();
-    let auth = headers.get("Authorization");
+    let auth = headers.get("Authorization").or(headers.get("Sec-Websocket-Protocol"));
     if auth.is_none() {
         return error::<String>(StatusCode::UNAUTHORIZED, "No authorization header provided").into_response();
     }
@@ -32,15 +32,15 @@ pub async fn authorize(mut req: Request, next: Next) -> Response {
     }
 
     let parts: Vec<&str> = auth.unwrap().split_whitespace().collect();
-    if parts.len() != 2 {
-        return error::<String>(StatusCode::UNAUTHORIZED, "Invalid authorization header").into_response();
+    let token = parts.last();
+    if token.is_none() {
+        return error::<String>(StatusCode::UNAUTHORIZED, "Invalid token").into_response();
     }
 
-    let token = parts[1];
     let mut extensions = req.extensions_mut();
     let user = {
-        let mut state = extensions.get_mut::<SharedState>().unwrap().write().unwrap();
-        let claims: Result<BTreeMap<String, i64>, jwt::error::Error> = token.verify_with_key(&state.jwt_key);
+        let mut state = extensions.get_mut::<SharedState>().unwrap().write().await;
+        let claims: Result<BTreeMap<String, i64>, jwt::error::Error> = token.unwrap().verify_with_key(&state.jwt_key);
         if claims.is_err() {
             return error::<String>(StatusCode::UNAUTHORIZED, "Invalid token").into_response();
         }

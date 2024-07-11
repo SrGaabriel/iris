@@ -18,7 +18,7 @@ pub async fn get_contacts(
     request: Request<Body>
 ) -> IrisResponse<Vec<ContactResponse>> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
-    let conn = &mut state.write().unwrap().database;
+    let conn = &mut state.write().await.database;
     let contacts = users::table()
         .filter(id.ne(user.id))
         .load::<User>(conn)

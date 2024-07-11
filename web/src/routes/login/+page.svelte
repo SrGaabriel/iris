@@ -1,8 +1,5 @@
 <script lang="ts">
-    import {DOMAIN} from "../../interaction/server.ts";
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const redirect = urlParams.get('redirect');
+    import {API} from "../../interaction/server.ts";
 
     async function submit() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -10,7 +7,7 @@
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
 
-        const response = await fetch(`http://${DOMAIN}/login`, {
+        const response = await fetch(`${API}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -22,12 +19,7 @@
         if (response.ok) {
             const data = await response.json();
             document.cookie = `token=${data.token}`;
-            result.innerText = `Login successful, you are ${data.user.name} (@${data.user.username}), with ID ${data.user.id} and email ${data.user.email}, your token is ${data.token}`;
-            if (redirect) {
-                window.location.href = redirect;
-            } else {
-                window.location.href = '/app';
-            }
+            window.location.href = '/app';
         } else {
             result.innerText = 'Login failed';
         }

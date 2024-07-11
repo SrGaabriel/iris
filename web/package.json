@@ -31,7 +31,9 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"json-bigint": "^1.0.0",
 		"protobufjs": "^7.3.2",
+		"stringfy": "^0.0.12",
 		"ws": "^8.18.0"
 	}
 }

@@ -1,11 +1,11 @@
 export type User = {
-    id: number,
+    id: bigint,
     name: string,
     username: string,
 }
 
 export type Self = {
-    id: number,
+    id: bigint,
     name: string,
     username: string,
     email: string

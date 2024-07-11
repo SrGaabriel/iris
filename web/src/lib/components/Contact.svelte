@@ -3,19 +3,20 @@
     // profile picture, text, hour
 
     export let picture: string;
-    export let name: string;
+    export let user: any;
     export let text: string;
     export let hour: string;
+    export let selected: any;
 </script>
 
-<div class="contact">
-    <img src={picture} alt={`${name}'s profile picture`} class="photo"/>
+<button class="contact" on:click={() => selected = user}>
+    <img src={picture} alt={`${user.name}'s profile picture`} class="photo"/>
     <div class="text">
-        <span class="name">{name}</span>
+        <span class="name">{user.name}</span>
         <span class="message">{text}</span>
     </div>
     <span class="date">{hour}</span>
-</div>
+</button>
 
 <style>
     .contact {
@@ -24,6 +25,9 @@
         align-items: center;
         width: 100%;
         height: 75px;
+        border: none;
+        outline: none;
+        background-color: transparent;
         border-bottom: 1px solid #e9e9e9;
         transition: background-color 0.2s;
         user-select: none;
@@ -44,6 +48,7 @@
     .text {
         display: flex;
         flex-direction: column;
+        align-items: flex-start;
     }
 
     .name {

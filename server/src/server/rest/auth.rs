@@ -20,7 +20,7 @@ pub async fn login(
     Extension(state): Extension<SharedState>,
     Json(request): Json<LoginRequest>,
 ) -> IrisResponse<UserAuthResponse> {
-    let state = &mut state.write().unwrap();
+    let state = &mut state.write().await;
     let a = users
         .filter(username.eq(&request.identifier))
         .select(User::as_select())
@@ -46,7 +46,7 @@ pub async fn register(
     Extension(state): Extension<SharedState>,
     Json(request): Json<RegisterRequest>,
 ) -> IrisResponse<UserAuthResponse> {
-    let state = &mut state.write().unwrap();
+    let state = &mut state.write().await;
     println!("Request password: {}", request.password);
     let hashed_password = state.argon.hash_password(request.password.as_bytes(), &state.argon_salt).expect("Failed to hash password");
     println!("Hashed password: {}", hashed_password);

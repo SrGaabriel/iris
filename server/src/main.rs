@@ -4,19 +4,23 @@ mod database;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use argon2::Argon2;
 use argon2::password_hash::SaltString;
 use axum::{extract::ws::{Message, WebSocket, WebSocketUpgrade}, response::IntoResponse, routing::get, Router, middleware};
 use axum::body::Body;
 use axum::middleware::AddExtension;
 use axum::routing::post;
+use crossbeam::queue::SegQueue;
+use dashmap::DashMap;
 use diesel::PgConnection;
 use dotenvy::dotenv;
 use futures_util::SinkExt;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use tokio::net::TcpListener;
+use tokio::sync::mpsc::Sender;
 use tower::ServiceBuilder;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tower_http::add_extension::AddExtensionLayer;
@@ -37,7 +41,7 @@ async fn main() {
 
     let database_connection = database::connect();
     let state = AppState {
-        connections: HashMap::new(),
+        packet_queue: DashMap::new(),
         database: database_connection,
         jwt_key: key,
         argon: Argon2::default(),
@@ -47,21 +51,22 @@ async fn main() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_websockets=debug,tower_http=info".into()),
+                .unwrap_or_else(|_| "example_websockets=debug,tower_http=info,diesel=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
     let app = Router::new()
+        .route("/ws", get(server::subscribe_chat_handshake))
         .route("/api/users/@me", get(server::rest::user::get_self))
         .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
+        .route("/api/messages/:contact_id", post(server::rest::messages::create_message))
+        .route("/api/messages/:contact_id", get(server::rest::messages::get_messages))
         .route_layer(
             middleware::from_fn(authorize)
         )
         .route("/login", post(server::rest::auth::login))
         .route("/signup", post(server::rest::auth::register))
-        .route("/api/users/@me", get(server::rest::user::get_self))
-        .route("/ws", get(server::subscribe_chat_handshake))
         .layer(CorsLayer::permissive())
         .layer(
             ServiceBuilder::new()
@@ -72,7 +77,7 @@ async fn main() {
                 .into_inner()
         );
 
-    let listener = TcpListener::bind("127.0.0.1:7989")
+    let listener = TcpListener::bind("127.0.0.1:3000")
         .await
         .expect("failed to bind to address");
     tracing::info!("listening on {}", listener.local_addr().unwrap());
@@ -85,7 +90,7 @@ async fn main() {
 }
 
 pub struct AppState {
-    pub connections: HashMap<SocketAddr, User>,
+    pub packet_queue: DashMap<i64, Sender<Vec<u8>>>,
     pub database: PgConnection,
     pub jwt_key: Hmac<Sha256>,
     pub argon: Argon2<'static>,

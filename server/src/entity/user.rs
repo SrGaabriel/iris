@@ -1,6 +1,6 @@
-use diesel::{Insertable, Queryable, Selectable};
+use diesel::{Identifiable, Insertable, Queryable, Selectable};
 
-#[derive(Debug, Queryable, Selectable, Insertable, Clone)]
+#[derive(Debug, Identifiable, Queryable, Selectable, Insertable, Clone)]
 #[diesel(table_name = users)]
 #[diesel(primary_key(id))]
 pub struct User {

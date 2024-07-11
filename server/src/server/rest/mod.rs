@@ -8,6 +8,7 @@ pub mod auth;
 pub mod contacts;
 pub mod user;
 pub mod middlewares;
+pub mod messages;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 
@@ -60,6 +61,25 @@ impl From<&User> for ContactResponse {
             id: user.id,
             name: String::from(&user.name),
             username: String::from(&user.username)
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct PrivateMessage {
+    pub id: i64,
+    pub content: String,
+    pub user_id: i64,
+    pub context: i64,
+}
+
+impl From<&crate::entity::message::Message> for PrivateMessage {
+    fn from(message: &crate::entity::message::Message) -> Self {
+        PrivateMessage {
+            id: message.id,
+            content: String::from(&message.content),
+            user_id: message.user_id,
+            context: message.context
         }
     }
 }
