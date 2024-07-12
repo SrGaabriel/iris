@@ -3,11 +3,13 @@
     import {API} from "../../interaction/server.ts";
     import type {User} from "$lib/user.ts";
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
+    import type TargetedStore from "../../util/targetedStore.ts";
 
     export let token: string;
     export let user: User;
     export let contact: User;
     export let store: any;
+    export let keyStore: TargetedStore;
 
     let messages: any[] = [];
     let typingMessage = '';
@@ -28,17 +30,14 @@
             recalculateHeight()
         });
 
-        document.addEventListener('keydown', (event) => {
-            // Enter, but we don't want to submit the form if it's a Shift+Enter
-            if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        keyStore.subscribe(contact.id.toString(), (key) => {
+            if (!key) return;
+            if (key === 'Enter') {
                 submit();
+                return;
             }
-
-            if (!isCharacterKeyPress(event)) return;
-            // Else, if it's a key that can be typed (not end, home, f1, control, etc...) and the input is not focused, add it to the input
-            else if (event.key.length === 1 && document.activeElement !== inputElement) {
-                typingMessage += event.key;
-                inputElement.focus()
+            if (document.activeElement !== inputElement) {
+                inputElement.focus();
             }
         });
 
@@ -96,22 +95,9 @@
             return contact;
         }
     }
-
-    function isCharacterKeyPress(evt) {
-        if (typeof evt.which == "undefined") {
-            // This is IE, which only fires keypress events for printable keys
-            return true;
-        } else if (typeof evt.which == "number" && evt.which > 0) {
-            // In other browsers except old versions of WebKit, evt.which is
-            // only greater than zero if the keypress is a printable key.
-            // We need to filter out backspace and ctrl/alt/meta key combinations
-            return !evt.ctrlKey && !evt.metaKey && !evt.altKey && evt.which != 8;
-        }
-        return false;
-    }
 </script>
 
-<div class="chat">
+<div class="chat" id="chat-{contact.id}">
     <div class="header">
         <span class="contact-name">{contact?.name}</span>
     </div>
