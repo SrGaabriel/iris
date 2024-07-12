@@ -4,25 +4,38 @@
 
     export let picture: string;
     export let user: any;
-    export let username: string;
     export let text: string;
     export let hour: string;
-    export let selected: any;
+    export let selected: any | null;
+
+    $: isSelected = selected && selected.id === user.id;
+
+    function handleMouseMove(event: MouseEvent) {
+        const contact = event.currentTarget as HTMLButtonElement;
+        const rect = contact.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        contact.style.setProperty('--x', x + 'px');
+        contact.style.setProperty('--y', y + 'px');
+    }
 </script>
 
-<button class="contact" on:click={() => selected = user}>
-    <div class="top">
-        <img src={picture} alt={`${user.name}'s profile picture`} class="photo"/>
-        <div class="text">
-            <div class="identifier">
-                <span class="name">{user.name}</span>
-                <span class="username">@{user.username}</span>
+<button class="contact" on:click={() => selected = user} on:mousemove={handleMouseMove} data-selected={isSelected}>
+    <div class="contact-content" on:mousemove={handleMouseMove} data-selected={isSelected}>
+        <div class="top">
+            <img src={picture} alt={`${user.name}'s profile picture`} class="photo"/>
+            <div class="text">
+                <div class="identifier">
+                    <span class="name">{user.name}</span>
+                    <span class="username">@{user.username}</span>
+                </div>
+                <span class="biography">A free thinker roaming Earth.</span>
             </div>
-            <span class="biography">A free thinker roaming Earth.</span>
         </div>
-    </div>
-    <div class="last-message-container">
-        <span class="last-message">{text}</span>
+        <div class="last-message-container">
+            <span class="last-message">{text}</span>
+        </div>
     </div>
 </button>
 
@@ -31,16 +44,72 @@
         font-family: 'DM Sans', sans-serif;
         display: flex;
         flex-direction: column;
+        align-items: center;
+        justify-content: center;
         width: 95%;
         min-height: 75px;
         border: none;
         outline: none;
         border-radius: 12px;
-        background-color: #2a2a2a;
+        background-color: var(--light-contrast);
         transition: all 0.2s;
         user-select: none;
         cursor: pointer;
+        position: relative;
+    }
+
+    .contact[data-selected="true"] {
+        background-color: var(--selected-contact);
+        cursor: default;
+        box-shadow: 0 0 7px black;
+        transform: translateY(-2px);
+    }
+
+    .contact[data-selected="true"] .contact-content {
+        background-color: inherit;
+    }
+
+    .contact[data-selected="true"] .contact-content::before {
+        opacity: 0;
+    }
+
+    .contact[data-selected="true"]::before {
+        opacity: 0;
+        background: var(--selected-contact) none;
+    }
+
+    .contact-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        width: 100%;
+        height: 100%;
         padding: 10px 4px;
+        border-radius: 12px;
+        flex-direction: column;
+        background-color: var(--light-contrast);
+    }
+
+    .contact-content::before {
+        position: absolute;
+        left: 0;
+        top: 0;
+        border-radius: inherit;
+        content: "";
+        z-index: 1;
+        opacity: 0;
+        width: calc(100% + 1px);
+        height: calc(100% + 1px);
+        background: radial-gradient(
+                1200px circle at var(--x) var(--y),
+                rgba(var(--delicate-hover-contrast), 0.07),
+                transparent 20%
+        );
+        transition: opacity 0.6s;
+    }
+
+    .contact-content:hover::before {
+        opacity: 1;
     }
 
     .top {
@@ -48,9 +117,27 @@
         align-items: center;
     }
 
-    .contact:hover {
-        transform: translateY(-5px);
-        background-color: #242424;
+    .contact::before {
+        position: absolute;
+        border-radius: inherit;
+        align-self: center;
+        justify-self: center;
+        content: "";
+        z-index: 1;
+        opacity: 0;
+        margin-bottom: 1px;
+        width: calc(100% - 2px);
+        height: 100%;
+        background: radial-gradient(
+            800px circle at var(--x) var(--y),
+            rgba(var(--delicate-hover-contrast), 0.3),
+            transparent 40%
+        );
+        transition: opacity 0.6s;
+    }
+
+    .contact:hover::before {
+        opacity: 1;
     }
 
     .photo {
@@ -70,7 +157,7 @@
     .name {
         font-size: 16px;
         font-weight: 600;
-        color: white;
+        color: var(--text-color);
     }
 
     .identifier {
@@ -81,13 +168,13 @@
 
     .username {
         font-weight: 400;
-        color: #626262;
+        color: var(--blurred-username);
         font-size: 13px;
     }
 
     .biography {
         font-weight: 400;
-        color: #929292;
+        color: var(--biography-contact);
         font-size: 13px;
     }
 
@@ -98,16 +185,8 @@
     }
 
     .last-message {
+        font-weight: 500;
         text-align: left;
-        color: white;
-    }
-
-    .date {
-        font-size: 12px;
-        color: #6e6e6e;
-        margin-bottom: auto;
-        margin-left: auto;
-        margin-top: 12px;
-        margin-right: 8px;
+        color: var(--text-color);
     }
 </style>

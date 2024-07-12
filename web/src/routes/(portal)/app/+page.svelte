@@ -4,7 +4,7 @@
     import server, {API} from "../../../interaction/server.ts";
     import Chat from "$lib/components/Chat.svelte";
     import {writable} from "svelte/store";
-    import Nothing from "$lib/components/Nothing.svelte";
+    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
 
     export let data;
     let contacts: any[] = [];
@@ -29,10 +29,24 @@
 
 <div class="page">
     <div class="header">
+        <div class="icon-space">
+        </div>
+        <div class="theme-toggle-container">
+            <ThemeToggle/>
+        </div>
+        <div class="self-profile">
+            <img src="/assets/no_profile_picture.jpg" alt="Your profile picture" class="photo"/>
+            <div class="self-identifier">
+                <div class="self-identifier-name">
+                    <span class="self-name">{data.user.name}</span>
+                    <span class="self-username">@{data.user.username}</span>
+                </div>
+                <span class="self-biography">A free thinker roaming Earth.</span>
+            </div>
+        </div>
     </div>
     <div class="content">
         <div class="sidebar">
-
         </div>
         <div class="contacts">
             {#each contacts as contact}
@@ -45,16 +59,10 @@
                     <Chat user={data.user} bind:contact={selectedContact} store={messageStore} token={data.token}/>
                 {/key}
             {:else}
-                <Nothing/>
+                <h1 class="nothing">Select a contact to start chatting.</h1>
             {/if}
         </main>
-        {#if selectedContact}
-            <div class="specific-contact-container">
-                <div class="specific-contact">
 
-                </div>
-            </div>
-        {/if}
     </div>
 </div>
 
@@ -64,26 +72,69 @@
         flex-direction: column;
         width: 100vw;
         height: 100vh;
-        color: #646464;
-        background-color: #141414;
+        color: #b1b1b1;
+        background-color: var(--background);
         overflow: hidden;
     }
     .header {
-        min-height: 50px;
+        display: flex;
+        align-items: center;
+        min-height: 55px;
         width: 100%;
-        background-color: #2a2a2a;
-        border-bottom: 1px solid #646464;
+        background-color: var(--light-contrast);
+        border-bottom: 1px solid var(--thin-border);
+    }
+    .icon-space {
+        height: 100%;
+        width: 60px;
+        border-right: 1px solid var(--thin-border);
+    }
+    .self-profile {
+        display: flex;
+        align-items: center;
+        min-width: 200px;
+        margin-right: 30px;
+        padding: 0 14px;
+        font-family: 'DM Sans', sans-serif;
+        gap: 6px;
+        user-select: none;
+        cursor: pointer;
+    }
+    .self-profile:hover {
+        background-color: var(--heavy-constrast);
+    }
+    .self-name {
+        color: var(--text-color);
+        font-weight: 600;
+    }
+    .self-username {
+        font-size: 12px;
+        color: var(--blurred-username);
+    }
+    .self-biography {
+        font-size: 12px;
+        color: var(--biography-contact);
+    }
+    .self-identifier {
+        display: flex;
+        flex-direction: column;
+    }
+    .photo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin: 5px;
+        object-fit: cover;
     }
     .content {
         display: flex;
         width: 100%;
-        height: calc(100% - 50px);
+        height: calc(100% - 55px);
     }
     .sidebar {
         min-width: 60px;
-        border-top: 1px solid #2a2a2a;
-        background-color: #2a2a2a;
-        border-right: 1px solid #646464;
+        background-color: var(--light-contrast);
+        border-right: 1px solid var(--thin-border);
     }
     .contacts {
         padding-top: 24px;
@@ -100,17 +151,12 @@
         justify-content: center;
         width: 100%;
     }
-    .specific-contact-container {
-        display: flex;
-        align-items: center;
-        height: 100%;
-        width: 600px;
+    .nothing {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 32px;
     }
-    .specific-contact {
-        background-color: #2a2a2a;
-        border-radius: 12px;
+    .theme-toggle-container {
         margin-left: auto;
-        width: 100%;
-        height: 95%;
+        margin-right: 14px;
     }
 </style>
