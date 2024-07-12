@@ -69,7 +69,7 @@
 
 <div class="chat">
     <div class="header">
-        <h1>{contact?.name}</h1>
+        <span class="contact-name">{contact?.name}</span>
     </div>
     <div class="messages">
         <div class="messages-container">
@@ -86,37 +86,52 @@
                 </div>
             {/each}
         </div>
+        <div class="footer-space"></div>
     </div>
-    <input type="text" placeholder="Type a message..." bind:value={typingMessage}/>
-    <button on:click={() => submit()}>Send</button>
+    <div class="send-container">
+        <div class="send-input-container">
+            <input class="send-input" type="text" bind:value={typingMessage} placeholder="Type your message..." />
+        </div>
+        <button class="send-button" on:click={submit}>Send</button>
+    </div>
 </div>
 
 <style>
     .chat {
         display: flex;
         flex-direction: column;
-        width: 100%;
-        height: 100%;
+        align-items: center;
+        width: 95%;
+        height: 95%;
+        background-color: #2a2a2a;
+        border-radius: 16px;
     }
     .header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 100%;
         height: 75px;
-        background-color: white;
-        border-bottom: 2px solid #e9e9e9;
+    }
+    .contact-name {
+        color: white;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 32px;
+        font-weight: 600;
     }
     .messages {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
         width: 100%;
         height: 100%;
-        box-shadow: 4px 4px 6px black;
-        overflow: scroll;
+        overflow-y: scroll;
     }
     .messages-container {
         display: flex;
         flex-direction: column;
-        width: 75%;
-        margin-bottom: 20px;
+        width: 95%;
+        margin-bottom: 40px;
     }
     .message-container {
         display: flex;
@@ -131,7 +146,7 @@
         align-items: flex-start;
     }
     .message {
-        color: #2b2b2b;
+        color: #ebebeb;
         display: inline-block;
         padding: 10px 18px;
         border-radius: 64px;
@@ -139,20 +154,66 @@
         max-width: 400px;
         font-family: 'DM Sans', sans-serif;
         font-size: 17px;
-        text-wrap: normal;
+        text-wrap: auto;
         word-wrap: normal;
         overflow-wrap: normal;
         word-break: break-word;
     }
     .message.sent {
-        background-color: #50aed2;
+        background-color: #6451b8;
     }
     .message.received {
-        background-color: #bcbcbc;
+        background-color: #181818;
     }
     .message-sender-name {
         font-family: 'DM Sans', sans-serif;
+        color: #c9c9c9;
         font-size: 14px;
         margin-left: 2px;
+    }
+    .send-container {
+        display: flex;
+        align-items: center;
+        width: 95%;
+        height: 60px;
+        border-radius: 8px;
+        padding: 4px;
+        background-color: #111111;
+        margin: 24px;
+    }
+    .send-input-container {
+        background-color: #202020;
+        width: 90%;
+        height: 36px;
+        margin: 0 16px;
+        border-radius: 12px;
+    }
+    .send-input {
+        outline: none;
+        border: none;
+        width: 100%;
+        color: white;
+        background-color: transparent;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 15px;
+        padding: 8px 16px;
+        border-radius: 24px;
+    }
+    .send-button {
+        font-size: 18px;
+        font-weight: 500;
+        color: #2a2a2a;
+        border-radius: 12px;
+        font-family: 'DM Sans', sans-serif;
+        background-color: white;
+        margin-left: auto;
+        border: none;
+        width: 80px;
+        cursor: pointer;
+        height: 90%;
+        margin-right: 12px;
+    }
+    .send-button:hover {
+        background-color: #4f4fc7;
     }
 </style>
