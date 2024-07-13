@@ -4,7 +4,6 @@
 
     export let picture: string;
     export let user: any;
-    export let text: string;
     export let hour: string;
     export let selected: any | null;
 
@@ -18,6 +17,18 @@
 
         contact.style.setProperty('--x', x + 'px');
         contact.style.setProperty('--y', y + 'px');
+    }
+
+    function formatLastMessage(): string {
+        const lastMessage = user.last_message?.content;
+        if (!lastMessage) {
+            return 'No messages yet.';
+        }
+
+        if (lastMessage.length > 30) {
+            return lastMessage.slice(0, 30) + '...';
+        }
+        return lastMessage;
     }
 </script>
 
@@ -34,7 +45,7 @@
             </div>
         </div>
         <div class="last-message-container">
-            <span class="last-message">{text}</span>
+            <span class="last-message">{formatLastMessage()}</span>
         </div>
     </div>
 </button>
@@ -126,7 +137,7 @@
         z-index: 1;
         opacity: 0;
         margin-bottom: 1px;
-        width: calc(100% - 2px);
+        width: calc(100% + 2px);
         height: 100%;
         background: radial-gradient(
             800px circle at var(--x) var(--y),

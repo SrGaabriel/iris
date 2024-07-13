@@ -49,20 +49,17 @@ impl From<User> for UserSelfResponse {
 }
 
 #[derive(Serialize)]
+pub struct PrimordialMessage {
+    pub id: i64,
+    pub content: String
+}
+
+#[derive(Serialize)]
 pub struct ContactResponse {
     pub id: i64,
     pub name: String,
-    pub username: String
-}
-
-impl From<&User> for ContactResponse {
-    fn from(user: &User) -> Self {
-        ContactResponse {
-            id: user.id,
-            name: String::from(&user.name),
-            username: String::from(&user.username)
-        }
-    }
+    pub username: String,
+    pub last_message: Option<PrimordialMessage>
 }
 
 #[derive(Serialize)]

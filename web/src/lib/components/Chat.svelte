@@ -42,14 +42,20 @@
         });
 
         store.subscribe((message) => {
-            console.log("at last")
             if (!message) return;
             if (message.context === user.id) {
                 const newMessage = {
                     ...message, user_id: message.userId
                 }
                 messages = [...messages, newMessage];
-                messagesElement.scrollTo(0, messagesElement.scrollHeight);
+                setTimeout(() => {
+                    messagesElement.scrollTo(0, messagesElement.scrollHeight);
+                }, 50);
+                Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                        new Notification("New message!");
+                    }
+                });
             }
         });
         fetch(`${API}/api/messages/${contact.id}`, {
