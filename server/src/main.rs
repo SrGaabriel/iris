@@ -30,6 +30,7 @@ use tower_http::cors::CorsLayer;
 use tracing::Subscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::entity::user::User;
+use crate::server::messages::Packet;
 use crate::server::rest::middlewares::{authorize, IrisAuth};
 use crate::util::snowflake::SnowflakeIssuer;
 
@@ -93,7 +94,7 @@ async fn main() {
 }
 
 pub struct AppState {
-    pub packet_queue: DashMap<i64, Sender<Vec<u8>>>,
+    pub packet_queue: DashMap<i64, Sender<Box<dyn Packet + Send>>>,
     pub database: PgConnection,
     pub jwt_key: Hmac<Sha256>,
     pub argon: Argon2<'static>,

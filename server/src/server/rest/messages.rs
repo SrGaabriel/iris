@@ -38,6 +38,7 @@ pub async fn create_message(
         content: message.0.content.clone(),
         context: contact_id,
         context_type: 0,
+        reception_status: 0
     };
 
     let connection = &mut state.database;
@@ -56,7 +57,7 @@ pub async fn create_message(
             user_id: inserted_message.user_id,
             context: inserted_message.context,
         };
-        tx.send(response.encode_to_vec()).then(|result| {
+        tx.send(Box::new(response)).then(|result| {
             if let Err(e) = result {
                 eprintln!("Failed to send message: {:?}", e);
             }

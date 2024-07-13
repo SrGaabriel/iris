@@ -16,7 +16,7 @@
     onMount(() => {
         document.addEventListener('keydown', (event) => {
             if (!selectedContact) return;
-            if (event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) return;
+            if (event.ctrlKey || !event.altKey || !event.metaKey) return;
             if (event.key === 'Enter' || (isCharacterKeyPress(event) && event.key.length === 1)) {
                 keydownStore.dispatch(selectedContact.id.toString(), event.key);
             }

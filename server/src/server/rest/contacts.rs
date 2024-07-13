@@ -25,10 +25,10 @@ pub async fn get_contacts(
     let conn = &mut state.write().await.database;
 
     let query = sql_query("
-        SELECT u.*, m.id AS message_id, m.content
+        SELECT u.*, m.id AS message_id, m.content, m.reception_status
         FROM users u
         LEFT JOIN LATERAL (
-            SELECT id, content
+            SELECT id, content, reception_status
             FROM messages
             WHERE (user_id = u.id AND context = $1)
                OR (context = u.id AND user_id = $1)

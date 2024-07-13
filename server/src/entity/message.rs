@@ -1,12 +1,9 @@
-use diesel::sql_types::Nullable;
-use diesel::sql_types::BigInt;
-use diesel::sql_types::Text;
-use chrono::NaiveDateTime;
+use diesel::sql_types::{Nullable, Text, BigInt, SmallInt};
 use diesel::{allow_tables_to_appear_in_same_query, Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use crate::entity::user::users;
 use crate::User;
 
-pub type ContextType = i32;
+pub type ContextType = i16;
 
 #[derive(Queryable, Identifiable, Associations, Selectable, Insertable)]
 #[diesel(belongs_to(User))]
@@ -17,6 +14,7 @@ pub struct Message {
     pub content: String,
     pub context: i64,
     pub context_type: ContextType,
+    pub reception_status: i16,
 }
 
 diesel::table! {
@@ -27,7 +25,8 @@ diesel::table! {
         user_id -> BigInt,
         content -> Text,
         context -> BigInt,
-        context_type -> Integer,
+        context_type -> SmallInt,
+        reception_status -> SmallInt,
     }
 }
 
@@ -50,4 +49,6 @@ pub struct ContactWithLastMessage {
     pub message_id: Option<i64>,
     #[sql_type = "Nullable<Text>"]
     pub content: Option<String>,
+    #[sql_type = "Nullable<SmallInt>"]
+    pub reception_status: Option<i16>
 }

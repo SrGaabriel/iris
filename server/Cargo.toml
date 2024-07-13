@@ -36,3 +36,5 @@ hmac= "0.12.1"
 sha2= "0.10.8"
 argon2 = "0.5.3"
 rand = "0.8.5"
+
+iris-macros = { path = "./macros", version = "^0.1" }

@@ -2,6 +2,10 @@
     // we have two parameters for this component
     // profile picture, text, hour
 
+
+    import server from "../../interaction/server.ts";
+    import {CONTEXT_READ_ID} from "../../interaction/message.ts";
+
     export let picture: string;
     export let user: any;
     export let hour: string;
@@ -30,9 +34,18 @@
         }
         return lastMessage;
     }
+
+    function handleClick() {
+        console.log(user.id);
+        server.sendPacket(
+            CONTEXT_READ_ID,
+            { contextId: user.id }
+        )
+        selected = user;
+    }
 </script>
 
-<button class="contact" on:click={() => selected = user} on:mousemove={handleMouseMove} data-selected={isSelected}>
+<button class="contact" on:click={() => handleClick()} on:mousemove={handleMouseMove} data-selected={isSelected}>
     <div class="contact-content" on:mousemove={handleMouseMove} data-selected={isSelected}>
         <div class="top">
             <img src={picture} alt={`${user.name}'s profile picture`} class="photo"/>

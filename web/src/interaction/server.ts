@@ -1,6 +1,6 @@
 import {writable} from "svelte/store";
 import {browser} from "$app/environment";
-import {loadProto, TextMessage} from "./message.ts";
+import {decodePacket, encodePacket, loadProto, Packet} from "./message.ts";
 
 export const SECURE = false;
 export const PROTOCOL = SECURE ? "s" : "";
@@ -21,7 +21,8 @@ function connect(token: string) {
 
         socket.addEventListener('message', (event) => {
             event.data.arrayBuffer().then((buffer: Iterable<number>) => {
-                const message = TextMessage.decode(new Uint8Array(buffer));
+                const packet = Packet.decode(new Uint8Array(buffer));
+                const message = decodePacket(packet);
                 messageStore.set(message);
             });
         });
@@ -30,23 +31,15 @@ function connect(token: string) {
 
 const messageStore = writable();
 
-const sendMessage = (message: string) => {
-    socket.send(TextMessage.encode({
-        content: message
-    }).finish());
-}
-
-function subscribeToContext(context: bigint, callback: (message: any) => void) {
-    return messageStore.subscribe((message) => {
-        if (message.context === context) {
-            callback(message);
-        }
-    });
+const sendPacket = (id: number, packet: object) => {
+    if (socket.readyState === WebSocket.OPEN) {
+        const encoded = encodePacket(id, packet);
+        socket.send(encoded);
+    }
 }
 
 export default {
     subscribe: messageStore.subscribe,
-    subscribeToContext,
-    sendMessage,
+    sendPacket,
     connect
 }
