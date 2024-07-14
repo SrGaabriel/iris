@@ -1,6 +1,7 @@
 import {writable} from "svelte/store";
 import {browser} from "$app/environment";
 import {decodePacket, encodePacket, loadProto, Packet} from "./message.ts";
+import TargetedStore, {CustomTargetedStore} from "../util/targetedStore.ts";
 
 export const SECURE = false;
 export const PROTOCOL = SECURE ? "s" : "";
@@ -23,13 +24,13 @@ function connect(token: string) {
             event.data.arrayBuffer().then((buffer: Iterable<number>) => {
                 const packet = Packet.decode(new Uint8Array(buffer));
                 const message = decodePacket(packet);
-                messageStore.set(message);
+                messageStore.dispatch(packet.id, message);
             });
         });
     }
 }
 
-const messageStore = writable();
+const messageStore = new CustomTargetedStore<number, any>();
 
 const sendPacket = (id: number, packet: object) => {
     if (socket.readyState === WebSocket.OPEN) {
@@ -39,7 +40,7 @@ const sendPacket = (id: number, packet: object) => {
 }
 
 export default {
-    subscribe: messageStore.subscribe,
+    store: messageStore,
     sendPacket,
     connect
 }

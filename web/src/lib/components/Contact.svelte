@@ -1,11 +1,7 @@
 <script lang="ts">
-    // we have two parameters for this component
-    // profile picture, text, hour
-
-
     import {onMount} from "svelte";
     import server from "../../interaction/server.ts";
-    import {CONTEXT_READ_ID} from "../../interaction/message.ts";
+    import {CONTEXT_READ_ID, MESSAGES_READ_ID} from "../../interaction/message.ts";
 
     export let picture: string;
     export let user: any;
@@ -18,8 +14,8 @@
 
     onMount(() => {
         messageStore.subscribe((message) => {
-            if (!message) return;
-            if (message.userId === user.id && !isSelected) {
+            if (!message || message.userId !== user.id) return;
+            if (!isSelected) {
                 unreadCount++;
             }
         });

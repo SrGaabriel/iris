@@ -15,6 +15,7 @@
         --message-sender-name: #6a6a6a;
         --chat-sender-color: #89dceb;
         --chat-receiver-color: #ffffff;
+        --message-details: #9c9c9c;
     }
     :global(body:not(.lightmode)) {
         --text-color: #fcfcfc;
@@ -30,5 +31,6 @@
         --message-sender-name: #c9c9c9;
         --chat-sender-color: #6451b8;
         --chat-receiver-color: #181818;
+        --message-details: #929292;
     }
 </style>

@@ -6,6 +6,7 @@
     import {writable} from "svelte/store";
     import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import TargetedStore from '../../../util/targetedStore.ts';
+    import {CONTEXT_READ_ID, MESSAGES_READ_ID, TEXT_MESSAGE_ID} from "../../../interaction/message.ts";
 
     export let data;
     let contacts: any[] = [];
@@ -31,8 +32,19 @@
             contacts = contact_list;
         });
         server.connect(data.token);
-        server.subscribe((message) => {
-            messageStore.set(message);
+        server.store.subscribeAll((packetId: number, message: any) => {
+            switch (packetId) {
+                case TEXT_MESSAGE_ID:
+                    messageStore.set(message);
+                    if (selectedContact && message.userId === selectedContact.id) {
+                        server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
+                    }
+                    break;
+                case MESSAGES_READ_ID:
+                    break;
+                default:
+                    console.log(`Unknown packet id: ${packetId}`);
+            }
         });
     })
 

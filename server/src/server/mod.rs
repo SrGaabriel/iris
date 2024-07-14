@@ -11,7 +11,7 @@ use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{sink::SinkExt, stream::StreamExt};
 use prost::Message;
 use tokio::sync::mpsc::Receiver;
-use crate::entity::message::messages::{context, reception_status, user_id};
+use crate::entity::message::messages::{id as messageId, context, reception_status, user_id};
 use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::user::User;
 use crate::server::messages::{ContextRead, encode_packet_message, Packet, PacketMessage};
@@ -66,10 +66,19 @@ pub async fn subscribe_chat(connected_user_id: i64, application: SharedState, mu
                         println!("Updating reception status... {}, {}", connected_user_id, request.context_id);
                         let query = diesel::update(messagesTable)
                             .filter(context.eq(connected_user_id).and(reception_status.ne(2)).and(user_id.eq(request.context_id)))
-                            .set(reception_status.eq(2));
-                        println!("{}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+                            .set(reception_status.eq(2))
+                            .returning(messageId);
                         let state = &mut application.write().await;
-                        query.execute(&mut state.database).unwrap();
+                        let returns = query.load::<i64>(&mut state.database).expect("Failed to update reception status");
+
+                        let target_tx = state.packet_queue.get(&request.context_id);
+                        if let Some(tx) = target_tx {
+                            println!("Sending messages read...");
+                            tx.send(Box::new(messages::MessagesRead {
+                                reader_id: connected_user_id,
+                                message_ids: returns
+                            })).await.expect("Failed to send messages read packet");
+                        }
                     }
                 },
                 _ => {

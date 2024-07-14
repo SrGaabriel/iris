@@ -46,3 +46,11 @@ pub struct TextMessageResponse {
     pub context: i64,
 }
 
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 3)]
+pub struct MessagesRead {
+    #[prost(int64, tag = "1")]
+    pub reader_id: i64,
+    #[prost(int64, repeated, packed, tag = "2")]
+    pub message_ids: Vec<i64>
+}

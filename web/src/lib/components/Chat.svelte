@@ -1,10 +1,11 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {API} from "../../interaction/server.ts";
+    import server, {API} from "../../interaction/server.ts";
     import type {User} from "$lib/user.ts";
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
     import type TargetedStore from "../../util/targetedStore.ts";
     import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
+    import {MESSAGES_READ_ID} from "../../interaction/message.ts";
 
     export let token: string;
     export let user: User;
@@ -39,6 +40,17 @@
             }
             if (document.activeElement !== inputElement) {
                 inputElement.focus();
+            }
+        });
+
+        server.store.subscribe(MESSAGES_READ_ID, (reading) => {
+            if (reading.readerId === contact.id) {
+                messages.forEach((message) => {
+                    if (reading.messageIds.includes(message.id)) {
+                        message.receipt = 2;
+                    }
+                });
+                messages = messages;
             }
         });
 
@@ -244,6 +256,7 @@
     .message-details {
         font-family: 'DM Sans', sans-serif;
         font-size: 12px;
+        color: var(--message-details);
     }
     .send-container {
         display: flex;

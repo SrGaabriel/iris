@@ -1,11 +1,13 @@
 export let Packet: any;
-export let ContextRead: any;
-export let TextMessage: any;
-
 export const ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 
+// SERVERBOUND
 export const CONTEXT_READ_ID = 1;
+
+// CLIENTBOUND
+
 export const TEXT_MESSAGE_ID = 2;
+export const MESSAGES_READ_ID = 3;
 
 export function loadProto() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -18,8 +20,9 @@ export function loadProto() {
 
         Packet = root.lookupType("Packet");
     });
-    ContextRead = loadProtoFile(CONTEXT_READ_ID, "ContextRead");
-    TextMessage = loadProtoFile(TEXT_MESSAGE_ID, "TextMessage");
+    loadProtoFile(CONTEXT_READ_ID, "ContextRead");
+    loadProtoFile(TEXT_MESSAGE_ID, "TextMessage");
+    loadProtoFile(MESSAGES_READ_ID, "MessagesRead");
 }
 
 function loadProtoFile(id: number, name: string): any {
