@@ -50,5 +50,7 @@ pub struct ContactWithLastMessage {
     #[sql_type = "Nullable<Text>"]
     pub content: Option<String>,
     #[sql_type = "Nullable<SmallInt>"]
-    pub reception_status: Option<i16>
+    pub reception_status: Option<i16>,
+    #[sql_type = "BigInt"]
+    pub reception_status_count: i64
 }

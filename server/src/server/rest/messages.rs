@@ -1,16 +1,14 @@
 use axum::{debug_handler, Extension, Json};
 use axum::body::Body;
-use axum::extract::{FromRequest, Path};
+use axum::extract::Path;
 use axum::http::{Request, StatusCode};
-use diesel::{BoolExpressionMethods, debug_query, ExpressionMethods, IntoSql, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures_util::FutureExt;
 use http_body_util::BodyExt;
-use prost::Message as ProstMessage;
-use rand::random;
 use serde::Deserialize;
 
 use crate::entity::message::Message;
-use crate::entity::message::messages::{context, context_type, user_id};
+use crate::entity::message::messages::{context, context_type, id as messageId, user_id};
 use crate::entity::message::messages::dsl::messages;
 use crate::entity::user::User;
 use crate::server::messages::TextMessageResponse;
@@ -83,7 +81,8 @@ pub async fn get_messages(
         .filter(
             (user_id.eq(user.id).and(context.eq(contact_id)))
                 .or(user_id.eq(contact_id).and(context.eq(user.id)))
-        );
+        )
+        .order(messageId.desc());
     let bilateral_messages = query.load::<Message>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| PrivateMessage::from(m)).collect())

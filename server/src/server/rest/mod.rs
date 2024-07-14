@@ -51,7 +51,8 @@ impl From<User> for UserSelfResponse {
 #[derive(Serialize)]
 pub struct PrimordialMessage {
     pub id: i64,
-    pub content: String
+    pub content: String,
+    pub receipt: i16
 }
 
 #[derive(Serialize)]
@@ -59,7 +60,8 @@ pub struct ContactResponse {
     pub id: i64,
     pub name: String,
     pub username: String,
-    pub last_message: Option<PrimordialMessage>
+    pub last_message: Option<PrimordialMessage>,
+    pub unread_count: i64
 }
 
 #[derive(Serialize)]
@@ -68,6 +70,7 @@ pub struct PrivateMessage {
     pub content: String,
     pub user_id: i64,
     pub context: i64,
+    pub receipt: i16
 }
 
 impl From<&crate::entity::message::Message> for PrivateMessage {
@@ -76,7 +79,8 @@ impl From<&crate::entity::message::Message> for PrivateMessage {
             id: message.id,
             content: String::from(&message.content),
             user_id: message.user_id,
-            context: message.context
+            context: message.context,
+            receipt: message.reception_status
         }
     }
 }

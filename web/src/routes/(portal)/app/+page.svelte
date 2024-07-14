@@ -73,7 +73,13 @@
         </div>
         <div class="contacts">
             {#each contacts as contact}
-                <Contact user={contact} text="These are the things I want you to take care of. Please take a good look at them." hour="10:00am" picture="/assets/no_profile_picture.jpg" bind:selected={selectedContact}/>
+                <Contact
+                        user={contact}
+                        messageStore={messageStore}
+                        hour="10:00am"
+                        picture="/assets/no_profile_picture.jpg"
+                        bind:selected={selectedContact}
+                />
             {/each}
         </div>
         <main class="block">

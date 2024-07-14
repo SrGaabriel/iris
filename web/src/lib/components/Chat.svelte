@@ -4,6 +4,7 @@
     import type {User} from "$lib/user.ts";
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
     import type TargetedStore from "../../util/targetedStore.ts";
+    import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
 
     export let token: string;
     export let user: User;
@@ -43,7 +44,7 @@
 
         store.subscribe((message) => {
             if (!message) return;
-            if (message.context === user.id) {
+            if (message.userId === contact.id) {
                 const newMessage = {
                     ...message, user_id: message.userId
                 }
@@ -51,11 +52,6 @@
                 setTimeout(() => {
                     messagesElement.scrollTo(0, messagesElement.scrollHeight);
                 }, 50);
-                Notification.requestPermission().then((permission) => {
-                    if (permission === "granted") {
-                        new Notification("New message!");
-                    }
-                });
             }
         });
         fetch(`${API}/api/messages/${contact.id}`, {
@@ -64,7 +60,7 @@
                 'Authorization': 'Bearer ' + token
             }
         }).then((request) => request.json()).then((messageList) => {
-            messages = messageList;
+            messages = messageList.reverse();
         }).then(() => {
             messagesElement.scrollTo(0, messagesElement.scrollHeight);
         }).catch((error) => {
@@ -101,6 +97,17 @@
             return contact;
         }
     }
+
+    function formatReceipt(receipt: string): string {
+        switch (receipt) {
+            case 0:
+                return 'Sent';
+            case 1:
+                return 'Delivered';
+            case 2:
+                return 'Read';
+        }
+    }
 </script>
 
 <div class="chat" id="chat-{contact.id}">
@@ -109,7 +116,7 @@
     </div>
     <div class="messages" id="messages">
         <div class="messages-container" data-relevant="true">
-            {#each messages as message}
+            {#each messages as message,i}
                 {@const sender = getUserObject(message.user_id)}
                 {@const sent = sender.id === user.id}
                 <div class="message-container {sent ? 'sent' : 'received'}">
@@ -122,6 +129,15 @@
                                 data-only-emojis={isMessageMadeOfOnlyEmojis(message.content)}
                                 data-emoji-count={countEmojis(message.content)}
                         >{@html message.content.replace(/\n/g, '<br>')}</span>
+                    </div>
+                    <div class="message-details">
+                        {#if !messages[i+1] || messages[i+1].user_id !== message.user_id}
+                            <span>{getTimestampFormatted(getTimestamp(message.id))}</span>
+                            {#if message.user_id === user.id}
+                                •
+                                <span>{formatReceipt(message.receipt)}</span>
+                            {/if}
+                        {/if}
                     </div>
                 </div>
             {/each}
@@ -224,6 +240,10 @@
         font-size: 14px;
         margin-left: 2px;
         font-weight: 500;
+    }
+    .message-details {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
     }
     .send-container {
         display: flex;

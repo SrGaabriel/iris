@@ -1,18 +1,13 @@
 use axum::body::Body;
 use axum::Extension;
 use axum::http::Request;
-use diesel::associations::HasTable;
-use diesel::row::NamedRow;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, Table, NullableExpressionMethods, sql_query, debug_query};
-use diesel::{QueryDsl, RunQueryDsl};
 use diesel::prelude::*;
+use diesel::row::NamedRow;
+use diesel::{debug_query, RunQueryDsl, sql_query};
 use diesel::sql_types::BigInt;
-use crate::entity::message::messages::{context, context_type, user_id};
-use crate::entity::message::messages::dsl::messages;
+
+use crate::entity::message::ContactWithLastMessage;
 use crate::entity::user::User;
-use crate::entity::user::users::dsl::users;
-use crate::entity::user::users as usersTable;
-use crate::entity::message::{ContactWithLastMessage, messages as messagesTable};
 use crate::server::rest::{ContactResponse, IrisResponse, ok, PrimordialMessage};
 use crate::SharedState;
 
@@ -25,21 +20,28 @@ pub async fn get_contacts(
     let conn = &mut state.write().await.database;
 
     let query = sql_query("
-        SELECT u.*, m.id AS message_id, m.content, m.reception_status
-        FROM users u
-        LEFT JOIN LATERAL (
-            SELECT id, content, reception_status
-            FROM messages
-            WHERE (user_id = u.id AND context = $1)
-               OR (context = u.id AND user_id = $1)
-            ORDER BY id DESC
-            LIMIT 1
-        ) m ON true
-        WHERE u.id != $1
-        ORDER BY COALESCE(m.id, -1) DESC;
-    ");
+        WITH recent_messages AS (
+            SELECT u.*, m.id AS message_id, m.content, m.reception_status,
+                   (SELECT COUNT(*)
+                    FROM messages
+                    WHERE (user_id = u.id AND context = $1)
+                      AND reception_status = 0) AS reception_status_count
+            FROM users u
+            LEFT JOIN LATERAL (
+                SELECT id, content, reception_status
+                FROM messages
+                WHERE (user_id = u.id AND context = $1)
+                   OR (context = u.id AND user_id = $1)
+                ORDER BY id DESC
+                LIMIT 1
+            ) m ON true
+            WHERE u.id != $1
+        )
+        SELECT *
+        FROM recent_messages
+        ORDER BY COALESCE(message_id, -1) DESC;
+    ").bind::<BigInt, _>(user.id);
     let results = query
-        .bind::<BigInt, _>(user.id)
         .load::<ContactWithLastMessage>(conn)
         .expect("Failed to load contacts");
 
@@ -51,10 +53,12 @@ pub async fn get_contacts(
             last_message: match contact.message_id {
                 Some(_) => Some(PrimordialMessage {
                     id: contact.message_id.unwrap(),
-                    content: contact.content.unwrap()
+                    content: contact.content.unwrap(),
+                    receipt: contact.reception_status.unwrap(),
                 }),
                 None => None
-            }
+            },
+            unread_count: contact.reception_status_count
         }
     }).collect();
 

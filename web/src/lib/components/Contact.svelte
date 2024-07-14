@@ -3,6 +3,7 @@
     // profile picture, text, hour
 
 
+    import {onMount} from "svelte";
     import server from "../../interaction/server.ts";
     import {CONTEXT_READ_ID} from "../../interaction/message.ts";
 
@@ -10,8 +11,19 @@
     export let user: any;
     export let hour: string;
     export let selected: any | null;
+    export let messageStore: any;
 
     $: isSelected = selected && selected.id === user.id;
+    $: unreadCount = user.unread_count || 0;
+
+    onMount(() => {
+        messageStore.subscribe((message) => {
+            if (!message) return;
+            if (message.userId === user.id && !isSelected) {
+                unreadCount++;
+            }
+        });
+    });
 
     function handleMouseMove(event: MouseEvent) {
         const contact = event.currentTarget as HTMLButtonElement;
@@ -36,11 +48,14 @@
     }
 
     function handleClick() {
-        console.log(user.id);
+        if (selected && selected.id === user.id) {
+            return;
+        }
         server.sendPacket(
             CONTEXT_READ_ID,
             { contextId: user.id }
         )
+        unreadCount = 0;
         selected = user;
     }
 </script>
@@ -50,9 +65,14 @@
         <div class="top">
             <img src={picture} alt={`${user.name}'s profile picture`} class="photo"/>
             <div class="text">
-                <div class="identifier">
-                    <span class="name">{user.name}</span>
-                    <span class="username">@{user.username}</span>
+                <div class="upper-text">
+                    <div class="identifier">
+                        <span class="name">{user.name}</span>
+                        <span class="username">@{user.username}</span>
+                    </div>
+                    {#if unreadCount > 0}
+                        <span class="unread-count">{unreadCount}</span>
+                    {/if}
                 </div>
                 <span class="biography">A free thinker roaming Earth.</span>
             </div>
@@ -173,9 +193,32 @@
     }
 
     .text {
+        width: 100%;
         display: flex;
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .upper-text {
+        position: relative;
+        display: flex;
+        width: 100%;
+    }
+
+    .unread-count {
+        position: absolute;
+        color: white;
+        font-weight: 600;
+        font-size: 18px;
+        font-family: 'DM Sans', sans-serif;
+        border-radius: 100%;
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        background-color: #e26666;
+        right: 12px;
     }
 
     .name {

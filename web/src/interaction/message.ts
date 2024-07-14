@@ -30,7 +30,6 @@ function loadProtoFile(id: number, name: string): any {
             console.log("Error loading proto file " + name);
             throw err;
         }
-        console.log("defined");
         ID_TO_PROTOBUF_OBJECT[id] = root.lookupType(name);
     });
 }

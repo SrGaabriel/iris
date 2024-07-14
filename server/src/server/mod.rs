@@ -7,13 +7,16 @@ use axum::extract::ws::WebSocket;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
+use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{sink::SinkExt, stream::StreamExt};
 use prost::Message;
 use tokio::sync::mpsc::Receiver;
-
+use crate::entity::message::messages::{context, reception_status, user_id};
+use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::user::User;
 use crate::server::messages::{ContextRead, encode_packet_message, Packet, PacketMessage};
 use crate::SharedState;
+use diesel::ExpressionMethods;
 
 pub mod messages;
 pub mod rest;
@@ -38,12 +41,12 @@ pub async fn subscribe_chat_handshake(
     let (tx, rx) = tokio::sync::mpsc::channel(100);
     state.write().await.packet_queue.insert(user.id, tx);
     println!("`{user_agent}` at {addr} connected.");
-    let response = ws.on_upgrade(move |socket| subscribe_chat(state, rx, socket, addr));
+    let response = ws.on_upgrade(move |socket| subscribe_chat(user.id, state, rx, socket, addr));
     // The following is necessary for Chromium-based browsers
     return (StatusCode::SWITCHING_PROTOCOLS, [("Sec-WebSocket-Protocol", "Token")], response);
 }
 
-pub async fn subscribe_chat(application: SharedState, mut rx: Receiver<Box<dyn Packet + Send>>, mut ws: WebSocket, addr: SocketAddr) {
+pub async fn subscribe_chat(connected_user_id: i64, application: SharedState, mut rx: Receiver<Box<dyn Packet + Send>>, mut ws: WebSocket, addr: SocketAddr) {
     let (mut sender, mut receiver) = ws.split();
 
     let send_task = tokio::spawn(async move {
@@ -54,18 +57,19 @@ pub async fn subscribe_chat(application: SharedState, mut rx: Receiver<Box<dyn P
 
     let receive_task = tokio::spawn(async move {
         while let Some(Ok(Binary(binary))) = receiver.next().await {
-            println!("Received");
-            println!("{:?}", binary);
             let packet = PacketMessage::decode(binary.as_slice()).unwrap();
-            println!("Unwrapped");
             match packet.id {
                 1 => {
-                    println!("Opa");
-                    println!("{:?}", packet);
-                    println!("{:?}", packet.data);
                     let request = ContextRead::decode(packet.data.as_slice());
                     if let Ok(request) = request {
                         println!("Received context read request: {:?}", request);
+                        println!("Updating reception status... {}, {}", connected_user_id, request.context_id);
+                        let query = diesel::update(messagesTable)
+                            .filter(context.eq(connected_user_id).and(reception_status.ne(2)).and(user_id.eq(request.context_id)))
+                            .set(reception_status.eq(2));
+                        println!("{}", diesel::debug_query::<diesel::pg::Pg, _>(&query));
+                        let state = &mut application.write().await;
+                        query.execute(&mut state.database).unwrap();
                     }
                 },
                 _ => {
