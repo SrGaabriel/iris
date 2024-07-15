@@ -3,7 +3,6 @@ mod entity;
 mod database;
 mod util;
 
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -30,6 +29,7 @@ use tower_http::cors::CorsLayer;
 use tracing::Subscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::entity::user::User;
+use crate::server::gateway::Gateway;
 use crate::server::messages::Packet;
 use crate::server::rest::middlewares::{authorize, IrisAuth};
 use crate::util::snowflake::SnowflakeIssuer;
@@ -43,7 +43,12 @@ async fn main() {
         .expect("Failed to create salt");
 
     let database_connection = database::connect();
+    let mut gateway = Gateway::new();
+    gateway.register_handler(Box::new(server::gateway::receipts::ReceiptGatewayHandler));
+    gateway.register_handler(Box::new(server::gateway::typing::TypingGatewayHandler));
+
     let state = AppState {
+        gateway,
         packet_queue: DashMap::new(),
         database: database_connection,
         jwt_key: key,
@@ -94,6 +99,7 @@ async fn main() {
 }
 
 pub struct AppState {
+    pub gateway: Gateway,
     pub packet_queue: DashMap<i64, Sender<Box<dyn Packet + Send>>>,
     pub database: PgConnection,
     pub jwt_key: Hmac<Sha256>,

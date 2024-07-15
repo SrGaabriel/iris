@@ -1,13 +1,13 @@
 use proc_macro::TokenStream;
-use syn::{Attribute, Expr, LitInt, parse_macro_input, Token};
-use syn::parse::{Parse, Parser};
+use syn::{LitInt, parse_macro_input};
+use syn::parse::Parser;
 use quote::quote;
 use syn::spanned::Spanned;
 
 #[proc_macro_attribute]
 pub fn packet(args: TokenStream, item: TokenStream) -> TokenStream {
     let mut id: Option<LitInt> = None;
-    let attributes = {
+    {
         let parser = syn::meta::parser(|meta| {
             if meta.path.is_ident("id") {
                 id = Some(meta.value()?.parse()?);
@@ -23,6 +23,12 @@ pub fn packet(args: TokenStream, item: TokenStream) -> TokenStream {
     let ident = struct_item.ident.clone();
     let expanded = quote! {
         #struct_item
+        
+        impl PacketStaticId for #ident {
+            fn get_id() -> i32 {
+                #id
+            }
+        }
 
         impl Packet for #ident {
             fn get_id(&self) -> i32 {

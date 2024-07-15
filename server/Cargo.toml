@@ -19,6 +19,7 @@ http-body-util = "0.1.2"
 chrono="0.4.38"
 crossbeam = "0.8.4"
 dashmap = "6.0.1"
+async-trait = "0.1.81"
 
 prost = "^0.13"
 prost-types="^0.13"

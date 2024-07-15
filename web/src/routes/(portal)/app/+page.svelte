@@ -6,21 +6,24 @@
     import {writable} from "svelte/store";
     import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import TargetedStore from '../../../util/targetedStore.ts';
-    import {CONTEXT_READ_ID, MESSAGES_READ_ID, TEXT_MESSAGE_ID} from "../../../interaction/message.ts";
+    import {
+        CONTACT_TYPING_ID,
+        CONTEXT_READ_ID,
+        MESSAGES_READ_ID,
+        TEXT_MESSAGE_ID
+    } from "../../../interaction/message.ts";
 
     export let data;
     let contacts: any[] = [];
     $: selectedContact = null;
     let messageStore = writable();
     let keydownStore = new TargetedStore();
+    $: typing = new Set();
 
     onMount(() => {
         document.addEventListener('keydown', (event) => {
             if (!selectedContact) return;
-            if (event.ctrlKey || !event.altKey || !event.metaKey) return;
-            if (event.key === 'Enter' || (isCharacterKeyPress(event) && event.key.length === 1)) {
-                keydownStore.dispatch(selectedContact.id.toString(), event.key);
-            }
+            keydownStore.dispatch(selectedContact.id, event);
         });
 
         fetch(`${API}/api/contacts/@me`, {
@@ -35,31 +38,28 @@
         server.store.subscribeAll((packetId: number, message: any) => {
             switch (packetId) {
                 case TEXT_MESSAGE_ID:
+                    typing.delete(message.userId);
                     messageStore.set(message);
                     if (selectedContact && message.userId === selectedContact.id) {
                         server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
                     }
+                    typing = typing;
                     break;
                 case MESSAGES_READ_ID:
+                    break;
+                case CONTACT_TYPING_ID:
+                    typing.add(message.contactId);
+                    typing = typing;
+                    setTimeout(() => {
+                        typing.delete(message.contactId);
+                        typing = typing;
+                    }, 5000);
                     break;
                 default:
                     console.log(`Unknown packet id: ${packetId}`);
             }
         });
     })
-
-    function isCharacterKeyPress(evt) {
-        if (typeof evt.which == "undefined") {
-            // This is IE, which only fires keypress events for printable keys
-            return true;
-        } else if (typeof evt.which == "number" && evt.which > 0) {
-            // In other browsers except old versions of WebKit, evt.which is
-            // only greater than zero if the keypress is a printable key.
-            // We need to filter out backspace and ctrl/alt/meta key combinations
-            return !evt.ctrlKey && !evt.metaKey && !evt.altKey && evt.which != 8;
-        }
-        return false;
-    }
 </script>
 
 <div class="page">
@@ -88,9 +88,9 @@
                 <Contact
                         user={contact}
                         messageStore={messageStore}
-                        hour="10:00am"
                         picture="/assets/no_profile_picture.jpg"
                         bind:selected={selectedContact}
+                        typing={typing.has(contact.id)}
                 />
             {/each}
         </div>
@@ -101,8 +101,9 @@
                             user={data.user}
                             bind:contact={selectedContact}
                             store={messageStore}
-                            keyStore={keydownStore}
+                            keyboardEventStore={keydownStore}
                             token={data.token}
+                            typing={typing.has(selectedContact.id)}
                     />
                 {/key}
             {:else}

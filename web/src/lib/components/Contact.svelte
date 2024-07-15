@@ -5,9 +5,11 @@
 
     export let picture: string;
     export let user: any;
-    export let hour: string;
     export let selected: any | null;
     export let messageStore: any;
+    export let typing: boolean;
+
+    $: lastMessage = user.last_message;
 
     $: isSelected = selected && selected.id === user.id;
     $: unreadCount = user.unread_count || 0;
@@ -15,6 +17,7 @@
     onMount(() => {
         messageStore.subscribe((message) => {
             if (!message || message.userId !== user.id) return;
+            lastMessage = message;
             if (!isSelected) {
                 unreadCount++;
             }
@@ -31,16 +34,16 @@
         contact.style.setProperty('--y', y + 'px');
     }
 
-    function formatLastMessage(): string {
-        const lastMessage = user.last_message?.content;
-        if (!lastMessage) {
+    function formatLastMessage(lastMessage): string {
+        const lastMessageContent = lastMessage?.content;
+        if (!lastMessageContent) {
             return 'No messages yet.';
         }
 
-        if (lastMessage.length > 30) {
-            return lastMessage.slice(0, 30) + '...';
+        if (lastMessageContent.length > 30) {
+            return lastMessageContent.slice(0, 30) + '...';
         }
-        return lastMessage;
+        return lastMessageContent;
     }
 
     function handleClick() {
@@ -74,7 +77,12 @@
             </div>
         </div>
         <div class="last-message-container">
-            <span class="last-message">{formatLastMessage()}</span>
+            {#if typing}
+                <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
+                <span class="last-message typing">Typing...</span>
+            {:else}
+                <span class="last-message">{formatLastMessage(lastMessage)}</span>
+            {/if}
         </div>
     </div>
 </button>
@@ -243,7 +251,9 @@
 
     .last-message-container {
         display: flex;
+        align-items: center;
         justify-content: flex-start;
+        gap: 12px;
         margin: 6px 10px;
     }
 
@@ -251,5 +261,28 @@
         font-weight: 500;
         text-align: left;
         color: var(--text-color);
+    }
+
+    .typing {
+        font-style: italic;
+        color: red;
+        animation: typing 1s infinite;
+    }
+
+    .typing-gif {
+        aspect-ratio: 1/1;
+        height: 24px;
+    }
+
+    @keyframes typing {
+        0% {
+            color: #ccc;
+        }
+        50% {
+            color: #878787;
+        }
+        100% {
+            color: #ccc;
+        }
     }
 </style>

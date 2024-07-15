@@ -5,13 +5,14 @@
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
     import type TargetedStore from "../../util/targetedStore.ts";
     import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
-    import {MESSAGES_READ_ID} from "../../interaction/message.ts";
+    import {MESSAGES_READ_ID, TYPING_REQUEST_ID} from "../../interaction/message.ts";
 
     export let token: string;
     export let user: User;
     export let contact: User;
     export let store: any;
-    export let keyStore: TargetedStore;
+    export let keyboardEventStore: TargetedStore;
+    export let typing: boolean;
 
     let messages: any[] = [];
     let typingMessage = '';
@@ -32,9 +33,9 @@
             recalculateHeight()
         });
 
-        keyStore.subscribe(contact.id.toString(), (key) => {
-            if (!key) return;
-            if (key === 'Enter') {
+        keyboardEventStore.subscribe(contact.id.toString(), (event: KeyboardEvent) => {
+            if (!event.key || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+            if (event.key === 'Enter') {
                 submit();
                 return;
             }
@@ -120,6 +121,26 @@
                 return 'Read';
         }
     }
+
+    function handleTextInput() {
+        console.log("Sent?")
+        server.sendPacket(TYPING_REQUEST_ID, {
+            contextId: contact.id
+        })
+    }
+
+    function isCharacterKeyPress(evt: KeyboardEvent) {
+        if (typeof evt.which == "undefined") {
+            // This is IE, which only fires keypress events for printable keys
+            return true;
+        } else if (typeof evt.which == "number" && evt.which > 0) {
+            // In other browsers except old versions of WebKit, evt.which is
+            // only greater than zero if the keypress is a printable key.
+            // We need to filter out backspace and ctrl/alt/meta key combinations
+            return !evt.ctrlKey && !evt.metaKey && !evt.altKey && evt.which != 8;
+        }
+        return false;
+    }
 </script>
 
 <div class="chat" id="chat-{contact.id}">
@@ -156,12 +177,19 @@
         </div>
         <div class="footer-space"></div>
     </div>
+    {#if typing}
+        <div class="typing-container">
+            <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
+            <span class="typing">{contact.name} is currently typing...</span>
+        </div>
+    {/if}
     <div class="send-container">
         <div class="send-input-container">
             <textarea
                     id="send-input"
                     class="send-input"
                     rows="1"
+                    on:input={handleTextInput}
                     bind:value={typingMessage}
                     placeholder="Type your message..."
             />
@@ -312,5 +340,38 @@
     }
     .send-button:hover {
         background-color: #e3e3e3;
+    }
+    .typing-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        justify-content: center;
+        width: 100%;
+        height: 40px;
+        background-color: var(--light-contrast);
+    }
+    .typing {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 16px;
+        color: var(--con);
+        font-style: italic;
+        animation: typing 1s infinite;
+    }
+
+    @keyframes typing {
+        0% {
+            opacity: 0.3;
+        }
+        50% {
+            opacity: 0.8;
+        }
+        100% {
+            opacity: 0.3;
+        }
+    }
+
+    .typing-gif {
+        height: 100%;
+        aspect-ratio: 1/1;
     }
 </style>

@@ -1,13 +1,16 @@
 export let Packet: any;
-export const ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
+export const CLIENTBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
+export const SERVERBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 
 // SERVERBOUND
 export const CONTEXT_READ_ID = 1;
+export const TYPING_REQUEST_ID = 2;
 
 // CLIENTBOUND
 
 export const TEXT_MESSAGE_ID = 2;
 export const MESSAGES_READ_ID = 3;
+export const CONTACT_TYPING_ID = 4;
 
 export function loadProto() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -20,12 +23,17 @@ export function loadProto() {
 
         Packet = root.lookupType("Packet");
     });
-    loadProtoFile(CONTEXT_READ_ID, "ContextRead");
-    loadProtoFile(TEXT_MESSAGE_ID, "TextMessage");
-    loadProtoFile(MESSAGES_READ_ID, "MessagesRead");
+    // SERVERBOUND
+    loadProtoFile(CONTEXT_READ_ID, "ContextRead", false);
+    loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
+
+    // CLIENTBOUND
+    loadProtoFile(TEXT_MESSAGE_ID, "TextMessage", true);
+    loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
+    loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
 }
 
-function loadProtoFile(id: number, name: string): any {
+function loadProtoFile(id: number, name: string, clientbound: boolean): any {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     window.protobuf.load(`messages/${name}.proto`, function(err, root) {
@@ -33,12 +41,13 @@ function loadProtoFile(id: number, name: string): any {
             console.log("Error loading proto file " + name);
             throw err;
         }
+        const ID_TO_PROTOBUF_OBJECT = clientbound ? CLIENTBOUND_ID_TO_PROTOBUF_OBJECT : SERVERBOUND_ID_TO_PROTOBUF_OBJECT;
         ID_TO_PROTOBUF_OBJECT[id] = root.lookupType(name);
     });
 }
 
 export function encodePacket(id: number, packet: object) {
-    const object = ID_TO_PROTOBUF_OBJECT[id];
+    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[id];
     const message = {
         id: id,
         data: object.encode(packet).finish()
@@ -47,7 +56,7 @@ export function encodePacket(id: number, packet: object) {
 }
 
 function encodePacketData(packet: any) {
-    const object = ID_TO_PROTOBUF_OBJECT[packet.id];
+    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
     if (object) {
         return object.encode(packet).finish();
     } else {
@@ -56,7 +65,7 @@ function encodePacketData(packet: any) {
 }
 
 export function decodePacket(packet: any) {
-    const object = ID_TO_PROTOBUF_OBJECT[packet.id];
+    const object = CLIENTBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
     if (object) {
         return object.decode(packet.data);
     } else {

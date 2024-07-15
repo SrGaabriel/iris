@@ -1,5 +1,4 @@
 use diesel::{Connection, PgConnection};
-use dotenvy::dotenv;
 
 pub fn connect() -> PgConnection {
     let database_url = std::env::var("DATABASE_URL")

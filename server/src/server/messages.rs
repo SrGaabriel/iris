@@ -7,6 +7,11 @@ pub trait Packet {
     fn decode_data(buffer: &[u8]) -> Result<Self, prost::DecodeError> where Self: Sized;
 }
 
+// workaround
+pub trait PacketStaticId {
+    fn get_id() -> i32;
+}
+
 pub fn encode_packet_message(packet: Box<dyn Packet>) -> Vec<u8> {
     PacketMessage {
         id: packet.get_id(),
@@ -27,6 +32,13 @@ pub struct PacketMessage {
 #[derive(Clone, PartialEq, Message)]
 #[packet(id = 1)]
 pub struct ContextRead {
+    #[prost(int64, tag = "1")]
+    pub context_id: i64
+}
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 2)]
+pub struct TypingRequest {
     #[prost(int64, tag = "1")]
     pub context_id: i64
 }
@@ -53,4 +65,11 @@ pub struct MessagesRead {
     pub reader_id: i64,
     #[prost(int64, repeated, packed, tag = "2")]
     pub message_ids: Vec<i64>
+}
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 4)]
+pub struct ContactTyping {
+    #[prost(int64, tag = "1")]
+    pub contact_id: i64
 }
