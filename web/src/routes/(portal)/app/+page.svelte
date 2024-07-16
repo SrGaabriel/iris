@@ -38,31 +38,43 @@
         });
         server.connect(data.token);
         server.store.subscribeAll((packetId: number, message: any) => {
+            if (!message) {
+                console.log(`Received packet with id ${packetId} and no message.`);
+                return;
+            }
             switch (packetId) {
-                case TEXT_MESSAGE_ID:
+                case TEXT_MESSAGE_ID: {
                     messageStore.set(message);
                     if (message.userId === data.user.id)
                         return;
-                    delete typing[message.userId];
+                    const previousTimeout = typing[message.userId];
+                    if (previousTimeout) {
+                        delete typing[message.userId];
+                        clearTimeout(previousTimeout);
+                    }
                     if (selectedContact && message.userId === selectedContact.id) {
                         server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
                     }
                     typing = typing;
                     break;
-                case MESSAGES_READ_ID:
-                    break;
-                case CONTACT_TYPING_ID:
-                    { const previousTimeout = typing[message.contactId];
+                }
+                case
+                    MESSAGES_READ_ID:
+                        break;
+                case
+                    CONTACT_TYPING_ID: {
+                        const previousTimeout = typing[message.contactId];
                     if (previousTimeout) {
                         clearTimeout(previousTimeout);
                     }
-                    
+
                     typing[message.contactId] = setTimeout(() => {
                         delete typing[message.contactId];
                         typing = typing;
                     }, TYPING_DELAY);
                     typing = typing;
-                    break; }
+                    break;
+                }
                 default:
                     console.log(`Unknown packet id: ${packetId}`);
             }

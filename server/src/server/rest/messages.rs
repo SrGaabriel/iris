@@ -2,17 +2,18 @@ use axum::{debug_handler, Extension, Json};
 use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, Table};
 use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
 
 use crate::entity::message::Message;
-use crate::entity::message::messages::{context, context_type, id as messageId, user_id};
+use crate::entity::message::messages::{content, context, context_type, edited, id as messageId, user_id};
+use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::message::messages::dsl::messages;
 use crate::entity::user::User;
-use crate::server::messages::TextMessageResponse;
-use crate::server::rest::{error, IrisResponse, ok, PrivateMessage};
+use crate::server::messages::{MessageDeleted, MessageEdited, TextMessageResponse};
+use crate::server::rest::{error, IrisResponse, no_content, ok, PrivateMessage};
 use crate::SharedState;
 
 #[debug_handler]
@@ -36,7 +37,8 @@ pub async fn create_message(
         content: message.0.content.clone(),
         context: contact_id,
         context_type: 0,
-        reception_status: 0
+        reception_status: 0,
+        edited: false
     };
 
     let connection = &mut state.database;
@@ -91,6 +93,84 @@ pub async fn get_messages(
     let bilateral_messages = query.load::<Message>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| PrivateMessage::from(m)).collect())
+}
+
+pub async fn edit_message(
+    Path(message_id): Path<i64>,
+    Extension(state): Extension<SharedState>,
+    request: Request<Body>
+) -> IrisResponse<PrivateMessage> {
+    let user = request.extensions().get::<User>().cloned().expect("User not found");
+    let message = Json::from_bytes(request.into_body().collect().await.unwrap().to_bytes().as_ref());
+    if message.is_err() {
+        return error(StatusCode::BAD_REQUEST, "Invalid message")
+    }
+    let message: Json<MessageCreationRequest> = message.unwrap();
+
+    let query = messages
+        .filter(messageId.eq(message_id))
+        .filter(user_id.eq(user.id));
+
+    // now we set both the content and the edited flag to true
+    let new_content = message.0.content;
+    let state = &mut state.write().await;
+    let message = diesel::update(query)
+        .set((content.eq(new_content.clone()), edited.eq(true)))
+        .returning(messagesTable::all_columns())
+        .get_result::<Message>(&mut state.database);
+
+    if message.is_err() {
+        return error(StatusCode::NOT_FOUND, "Message not found");
+    }
+    let message = message.unwrap();
+
+    if let Some(context_tx) = state.packet_queue.get(&message.context) {
+        let packet = MessageEdited {
+            message_id: message.id,
+            new_content,
+            editor_id: user.id,
+            context_id: message.context
+        };
+        context_tx.send(Box::new(packet)).then(|result| {
+            if let Err(e) = result {
+                eprintln!("Failed to send message: {:?}", e);
+            }
+            futures_util::future::ready(())
+        }).await;
+    }
+
+    ok(PrivateMessage::from(&message))
+}
+
+pub async fn delete_message(
+    Path(message_id): Path<i64>,
+    Extension(state): Extension<SharedState>,
+    request: Request<Body>
+) -> IrisResponse<()> {
+    let user = request.extensions().get::<User>().cloned().expect("User not found");
+
+    let state = &mut state.write().await;
+    let query = messages
+        .filter(messageId.eq(message_id))
+        .filter(user_id.eq(user.id));
+    let deleted = diesel::delete(query).returning(messagesTable::all_columns()).get_result::<Message>(&mut state.database);
+
+    if deleted.is_err() {
+        return error(StatusCode::NOT_FOUND, "Message not found");
+    }
+    let message = deleted.unwrap();
+
+    if let Some(context_tx) = state.packet_queue.get(&message.context) {
+        let packet = MessageDeleted { message_id, context_id: message.context };
+        context_tx.send(Box::new(packet)).then(|result| {
+            if let Err(e) = result {
+                eprintln!("Failed to send message: {:?}", e);
+            }
+            futures_util::future::ready(())
+        }).await;
+    }
+
+    no_content()
 }
 
 #[derive(Deserialize)]

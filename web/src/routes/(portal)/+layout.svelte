@@ -14,6 +14,7 @@
         --theme-toggle-contrast: #262626;
         --message-sender-name: #6a6a6a;
         --chat-sender-color: #89dceb;
+        --chat-sender-color-contrast: #c7e9f0;
         --chat-receiver-color: #ffffff;
         --message-details: #9c9c9c;
     }
@@ -30,6 +31,7 @@
         --theme-toggle-contrast: #ffffff;
         --message-sender-name: #c9c9c9;
         --chat-sender-color: #6451b8;
+        --chat-sender-color-contrast: #9b89cd;
         --chat-receiver-color: #181818;
         --message-details: #929292;
     }

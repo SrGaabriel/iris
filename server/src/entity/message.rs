@@ -15,6 +15,7 @@ pub struct Message {
     pub context: i64,
     pub context_type: ContextType,
     pub reception_status: i16,
+    pub edited: bool
 }
 
 diesel::table! {
@@ -27,6 +28,7 @@ diesel::table! {
         context -> BigInt,
         context_type -> SmallInt,
         reception_status -> SmallInt,
+        edited -> Bool
     }
 }
 

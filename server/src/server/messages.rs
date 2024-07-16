@@ -73,3 +73,25 @@ pub struct ContactTyping {
     #[prost(int64, tag = "1")]
     pub contact_id: i64
 }
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 5)]
+pub struct MessageEdited {
+    #[prost(int64, tag = "1")]
+    pub message_id: i64,
+    #[prost(int64, tag = "2")]
+    pub context_id: i64,
+    #[prost(int64, tag = "3")]
+    pub editor_id: i64,
+    #[prost(string, tag = "4")]
+    pub new_content: String
+}
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 6)]
+pub struct MessageDeleted {
+    #[prost(int64, tag = "1")]
+    pub message_id: i64,
+    #[prost(int64, tag = "2")]
+    pub context_id: i64
+}

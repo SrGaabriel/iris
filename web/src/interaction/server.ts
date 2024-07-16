@@ -24,7 +24,6 @@ function connect(token: string) {
             event.data.arrayBuffer().then((buffer: Iterable<number>) => {
                 const packet = Packet.decode(new Uint8Array(buffer));
                 const message = decodePacket(packet);
-                console.log(packet.id, message);
                 messageStore.dispatch(packet.id, message);
             });
         });

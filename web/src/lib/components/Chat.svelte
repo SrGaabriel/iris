@@ -5,7 +5,12 @@
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
     import type TargetedStore from "../../util/targetedStore.ts";
     import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
-    import {MESSAGES_READ_ID, TYPING_REQUEST_ID} from "../../interaction/message.ts";
+    import {
+        MESSAGE_DELETED_ID,
+        MESSAGE_EDITED_ID,
+        MESSAGES_READ_ID,
+        TYPING_REQUEST_ID
+    } from "../../interaction/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
 
     export let token: string;
@@ -21,10 +26,18 @@
 
     let messagesElement: any;
     let inputElement: any;
+    $: openContextMenu = null;
+    $: editingMessage = null;
 
     onMount(() => {
         messagesElement = document.getElementById('messages');
         inputElement = document.getElementById('send-input')! as HTMLTextAreaElement;
+
+        document.body.addEventListener('click', (event) => {
+            if (openContextMenu) {
+                toggleContextMenu(openContextMenu, false);
+            }
+        });
 
         function recalculateHeight() {
             let linebreaks = (inputElement.value.match(/\n/g) || []).length;
@@ -38,13 +51,32 @@
         keyboardEventStore.subscribe(contact.id.toString(), (event: KeyboardEvent) => {
             if (!event.key || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
             if (event.key === 'Enter') {
+                event.preventDefault();
                 submit();
                 return;
             }
-            if (document.activeElement !== inputElement) {
+            if (document.activeElement !== inputElement && !editingMessage) {
                 inputElement.focus();
             }
         });
+
+        server.store.subscribe(MESSAGE_DELETED_ID, (deletion) => {
+            messages = messages.filter((m) => m.id !== deletion.messageId);
+        });
+
+        server.store.subscribe(MESSAGE_EDITED_ID, (edit) => {
+            if (edit.editorId !== contact.id) return;
+            messages = messages.map((message) => {
+                if (message.id === edit.messageId) {
+                    return {
+                        ...message,
+                        content: edit.newContent,
+                        edited: true
+                    };
+                }
+                return message;
+            });
+        })
 
         server.store.subscribe(MESSAGES_READ_ID, (reading) => {
             if (reading.readerId === contact.id) {
@@ -95,6 +127,8 @@
                 content: typingMessage
             })
         }).then(response => response.text()).then((text) => JSONbig.parse(text)).then((message) => {
+            clearTimeout(typingTimeout);
+            isSelfTyping = false;
             messages = [...messages, message];
             typingMessage = '';
             inputElement.style.height='24px';
@@ -113,7 +147,7 @@
         }
     }
 
-    function formatReceipt(receipt: string): string {
+    function formatReceipt(receipt: number): string {
         switch (receipt) {
             case 0:
                 return 'Sent';
@@ -131,12 +165,13 @@
         }
     }
 
+    let typingTimeout = undefined;
     function continuousTyping() {
         isSelfTyping = true;
         server.sendPacket(TYPING_REQUEST_ID, {
             contextId: contact.id
         });
-        setTimeout(() => {
+        typingTimeout = setTimeout(() => {
             if (typingContent === typingMessage) {
                 isSelfTyping = false;
             } else {
@@ -144,6 +179,83 @@
                 continuousTyping()
             }
         }, TYPING_DELAY * 0.7);
+    }
+
+    function handleMessageContextMenu(event: MouseEvent) {
+        event.preventDefault();
+        const messageId = (event.currentTarget as HTMLElement).dataset.messageId;
+        if (!messageId) return;
+        toggleContextMenu(messageId);
+    }
+
+    function toggleContextMenu(messageId: string, on: boolean | null = null) {
+        if (on === null) {
+            openContextMenu = openContextMenu === messageId ? null : messageId;
+        } else {
+            openContextMenu = on ? messageId : null;
+        }
+    }
+
+    function startEditing(message: any) {
+        editingMessage = {
+            id: message.id,
+            content: message.content
+        };
+        setTimeout(() => {
+            const element = document.getElementById(`edit-input-${message.id}`) as HTMLTextAreaElement;
+            element.focus();
+        }, 50);
+    }
+
+    function submitEdit() {
+        if (!editingMessage) return;
+        fetch(`${API}/api/messages/${editingMessage.id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+            },
+            body: JSON.stringify({
+                content: editingMessage.content
+            })
+        }).then((response) => {
+            if (response.status === 200) {
+                messages = messages.map((message) => {
+                    if (message.id === editingMessage.id) {
+                        return {
+                            ...message,
+                            content: editingMessage.content,
+                            edited: true
+                        };
+                    }
+                    return message;
+                });
+                editingMessage = null;
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
+    }
+
+    function onEditKeydown(event: KeyboardEvent) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            submitEdit();
+        }
+    }
+    
+    function deleteMessage(messageId) {
+        fetch(`${API}/api/messages/${messageId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        }).then((response) => {
+            if (response.status === 204) {
+                messages = messages.filter((message) => message.id !== messageId);
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
     }
 </script>
 
@@ -160,15 +272,46 @@
                     <div class="message-sender">
                         <span class="message-sender-name">{sender.name}</span>
                     </div>
-                    <div class="message-text-container">
-                        <span
-                                class={`message ${sent ? 'sent' : 'received'}`}
-                                data-only-emojis={isMessageMadeOfOnlyEmojis(message.content)}
-                                data-emoji-count={countEmojis(message.content)}
-                        >{@html message.content.replace(/\n/g, '<br>')}</span>
+                    {#if openContextMenu === message.id.toString()}
+                        <div class="message-context-menu" id={`message-context-menu-${message.id}`}>
+                            <div class="message-context-menu-blur"></div>
+                            <div class="message-context-menu-content" style={`margin-${sent ? 'left' : 'right'}: auto;`}>
+                                <button class="message-context-menu-item" on:click={() => startEditing(message)}>
+                                    <i class="fa-regular fa-pen-to-square"></i>
+                                </button>
+                                <button class="message-context-menu-item delete-item" on:click={() => deleteMessage(message.id)}>
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {/if}
+                    <div class="message-text-container" on:contextmenu={handleMessageContextMenu} data-message-id={message.id}>
+                        {#if editingMessage?.id === message.id}
+                            <form on:submit|preventDefault={submit}>
+                                <textarea
+                                        id={`edit-input-${message.id}`}
+                                        class="message editing"
+                                        bind:value={editingMessage.content}
+                                        on:keydown={onEditKeydown}
+                                />
+                            </form>
+                        {:else}
+                            <span
+                                    class={`message ${sent ? 'sent' : 'received'}`}
+                                    data-only-emojis={isMessageMadeOfOnlyEmojis(message.content)}
+                                    data-emoji-count={countEmojis(message.content)}
+                            >{@html message.content.replace(/\n/g, '<br>')}</span>
+                        {/if}
                     </div>
-                    <div class="message-details">
-                        {#if !messages[i+1] || messages[i+1].user_id !== message.user_id}
+                    <div class="message-details {sent ? 'sent' : 'received'}">
+                        {#if message.edited || !messages[i+1] || messages[i+1].user_id !== message.user_id}
+                            {#if message.edited}
+                                <span class="edited-text">
+                                    <i class="fa-solid fa-pen"></i>
+                                    Edited
+                                </span>
+                                •
+                            {/if}
                             <span>{getTimestampFormatted(getTimestamp(message.id))}</span>
                             {#if message.user_id === user.id}
                                 •
@@ -258,13 +401,22 @@
         padding: 10px 18px;
         border-radius: 12px;
         width: auto;
-        max-width: 400px;
+        max-width: 300px;
+        background-color: red;
         font-family: 'DM Sans', sans-serif;
         font-size: 17px;
         text-wrap: auto;
         word-wrap: normal;
         overflow-wrap: normal;
         word-break: break-word;
+    }
+    .message.editing {
+        resize: none;
+        padding: 16px;
+        max-width: 600px;
+        outline: none;
+        border: 8px solid var(--chat-sender-color);
+        background-color: var(--chat-sender-color-contrast);
     }
     .message[data-only-emojis="true"] {
         font-size: 32px;
@@ -286,9 +438,24 @@
         font-weight: 500;
     }
     .message-details {
+        display: flex;
+        align-items: center;
+        justify-content: left;
+        gap: 4px;
+        width: 600px;
         font-family: 'DM Sans', sans-serif;
         font-size: 12px;
         color: var(--message-details);
+    }
+    .message-details.sent {
+        justify-content: right !important;
+    }
+    .edited-text {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 800;
+        gap: 8px;
     }
     .send-container {
         display: flex;
@@ -377,5 +544,65 @@
     .typing-gif {
         height: 100%;
         aspect-ratio: 1/1;
+    }
+
+    .message-context-menu {
+        display: flex;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 512px;
+    }
+
+    .message-context-menu-content {
+        position: relative;
+        z-index: 6;
+        border-radius: 512px;
+        margin: 24px 0;
+        background-color: var(--heavy-constrast);
+    }
+
+    .message-context-menu-item {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 16px;
+        color: var(--text-color);
+        background-color: transparent;
+        border: none;
+        width: 64px;
+        border-radius: 50%;
+        margin-bottom: auto;
+        aspect-ratio: 1/1;
+        cursor: pointer;
+        transition: all 0.4s;
+    }
+    .message-context-menu-item:hover {
+        background-color: var(--background);
+    }
+    .delete-item {
+        color: #d95252;
+    }
+    .delete-item:hover {
+        color: var(--text-color);
+        background-color: #d95252;
+    }
+    .message-context-menu-blur {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 6;
+        animation: blur 0.4s forwards;
+    }
+
+    @keyframes blur {
+        0% {
+            backdrop-filter: blur(0);
+        }
+        100% {
+            backdrop-filter: blur(10px);
+        }
     }
 </style>

@@ -22,6 +22,10 @@ pub fn ok<T: Serialize>(data: T) -> IrisResponse<T> {
     (StatusCode::OK, Either::E1(Json(data)))
 }
 
+pub fn no_content() -> IrisResponse<()> {
+    (StatusCode::NO_CONTENT, Either::E1(Json(())))
+}
+
 pub fn error<T: Serialize>(status: StatusCode, message: &str) -> IrisResponse<T> {
     (status, Either::E2(Json(IrisError {
         status: status.as_u16(),
@@ -70,7 +74,8 @@ pub struct PrivateMessage {
     pub content: String,
     pub user_id: i64,
     pub context: i64,
-    pub receipt: i16
+    pub receipt: i16,
+    pub edited: bool
 }
 
 impl From<&crate::entity::message::Message> for PrivateMessage {
@@ -80,7 +85,8 @@ impl From<&crate::entity::message::Message> for PrivateMessage {
             content: String::from(&message.content),
             user_id: message.user_id,
             context: message.context,
-            receipt: message.reception_status
+            receipt: message.reception_status,
+            edited: message.edited
         }
     }
 }

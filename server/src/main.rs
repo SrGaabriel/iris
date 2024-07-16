@@ -11,7 +11,7 @@ use argon2::password_hash::SaltString;
 use axum::{extract::ws::{Message, WebSocket, WebSocketUpgrade}, response::IntoResponse, routing::get, Router, middleware};
 use axum::body::Body;
 use axum::middleware::AddExtension;
-use axum::routing::post;
+use axum::routing::{delete, patch, post, put};
 use crossbeam::queue::SegQueue;
 use dashmap::DashMap;
 use diesel::PgConnection;
@@ -71,6 +71,8 @@ async fn main() {
         .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
         .route("/api/messages/:contact_id", post(server::rest::messages::create_message))
         .route("/api/messages/:contact_id", get(server::rest::messages::get_messages))
+        .route("/api/messages/:contact_id", put(server::rest::messages::edit_message))
+        .route("/api/messages/:contact_id", delete(server::rest::messages::delete_message))
         .route_layer(
             middleware::from_fn(authorize)
         )
