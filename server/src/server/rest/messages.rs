@@ -45,23 +45,28 @@ pub async fn create_message(
         .get_result::<Message>(connection)
         .expect("Failed to insert message");
 
-    // Now we need to communicate our message to the connected target
-    println!("Packet queue: {:?}", state.packet_queue);
-    if let Some(tx) = state.packet_queue.get(&contact_id) {
-        println!("There is something");
-        let response = TextMessageResponse {
-            id: inserted_message.id,
-            content: inserted_message.content.clone(),
-            user_id: inserted_message.user_id,
-            context: inserted_message.context,
-        };
-        tx.send(Box::new(response)).then(|result| {
+    let message = TextMessageResponse {
+        id: inserted_message.id,
+        content: inserted_message.content.clone(),
+        user_id: inserted_message.user_id,
+        context: inserted_message.context,
+    };
+    if let Some(tx) = state.packet_queue.get(&user.id) {
+        tx.send(Box::new(message.clone())).then(|result| {
             if let Err(e) = result {
                 eprintln!("Failed to send message: {:?}", e);
             }
             futures_util::future::ready(())
         }).await;
-        println!("Sent message to target");
+    }
+
+    if let Some(tx) = state.packet_queue.get(&contact_id) {
+        tx.send(Box::new(message)).then(|result| {
+            if let Err(e) = result {
+                eprintln!("Failed to send message: {:?}", e);
+            }
+            futures_util::future::ready(())
+        }).await;
     }
 
     ok(PrivateMessage::from(&inserted_message))

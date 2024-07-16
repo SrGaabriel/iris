@@ -1,8 +1,9 @@
 <script lang="ts">
     import {onMount} from "svelte";
     import server from "../../interaction/server.ts";
-    import {CONTEXT_READ_ID, MESSAGES_READ_ID} from "../../interaction/message.ts";
+    import {CONTEXT_READ_ID} from "../../interaction/message.ts";
 
+    export let selfId: number;
     export let picture: string;
     export let user: any;
     export let selected: any | null;
@@ -16,10 +17,14 @@
 
     onMount(() => {
         messageStore.subscribe((message) => {
-            if (!message || message.userId !== user.id) return;
-            lastMessage = message;
-            if (!isSelected) {
-                unreadCount++;
+            if (!message) return;
+            else if (message.userId === selfId && message.context === user.id) {
+                lastMessage = message;
+            } else if (message.userId === user.id && message.context === selfId) {
+                lastMessage = message;
+                if (!isSelected) {
+                    unreadCount++;
+                }
             }
         });
     });

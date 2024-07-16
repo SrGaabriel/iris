@@ -5,7 +5,7 @@ export type User = {
 }
 
 export type Self = {
-    id: bigint,
+    id: number,
     name: string,
     username: string,
     email: string

@@ -12,13 +12,15 @@
         MESSAGES_READ_ID,
         TEXT_MESSAGE_ID
     } from "../../../interaction/message.ts";
+    import {TYPING_DELAY} from "$lib/constants.ts";
 
     export let data;
     let contacts: any[] = [];
     $: selectedContact = null;
     let messageStore = writable();
     let keydownStore = new TargetedStore();
-    $: typing = new Set();
+    $: typing = {};
+    $: amITyping = false;
 
     onMount(() => {
         document.addEventListener('keydown', (event) => {
@@ -38,8 +40,10 @@
         server.store.subscribeAll((packetId: number, message: any) => {
             switch (packetId) {
                 case TEXT_MESSAGE_ID:
-                    typing.delete(message.userId);
                     messageStore.set(message);
+                    if (message.userId === data.user.id)
+                        return;
+                    delete typing[message.userId];
                     if (selectedContact && message.userId === selectedContact.id) {
                         server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
                     }
@@ -48,13 +52,17 @@
                 case MESSAGES_READ_ID:
                     break;
                 case CONTACT_TYPING_ID:
-                    typing.add(message.contactId);
-                    typing = typing;
-                    setTimeout(() => {
-                        typing.delete(message.contactId);
+                    { const previousTimeout = typing[message.contactId];
+                    if (previousTimeout) {
+                        clearTimeout(previousTimeout);
+                    }
+                    
+                    typing[message.contactId] = setTimeout(() => {
+                        delete typing[message.contactId];
                         typing = typing;
-                    }, 5000);
-                    break;
+                    }, TYPING_DELAY);
+                    typing = typing;
+                    break; }
                 default:
                     console.log(`Unknown packet id: ${packetId}`);
             }
@@ -86,11 +94,12 @@
         <div class="contacts">
             {#each contacts as contact}
                 <Contact
+                        selfId={data.user.id}
                         user={contact}
                         messageStore={messageStore}
                         picture="/assets/no_profile_picture.jpg"
                         bind:selected={selectedContact}
-                        typing={typing.has(contact.id)}
+                        typing={!!typing[contact.id]}
                 />
             {/each}
         </div>
@@ -103,7 +112,8 @@
                             store={messageStore}
                             keyboardEventStore={keydownStore}
                             token={data.token}
-                            typing={typing.has(selectedContact.id)}
+                            typing={!!typing[selectedContact.id]}
+                            bind:isSelfTyping={amITyping}
                     />
                 {/key}
             {:else}

@@ -6,6 +6,7 @@
     import type TargetedStore from "../../util/targetedStore.ts";
     import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
     import {MESSAGES_READ_ID, TYPING_REQUEST_ID} from "../../interaction/message.ts";
+    import {TYPING_DELAY} from "$lib/constants.ts";
 
     export let token: string;
     export let user: User;
@@ -13,6 +14,7 @@
     export let store: any;
     export let keyboardEventStore: TargetedStore;
     export let typing: boolean;
+    export let isSelfTyping: boolean;
 
     let messages: any[] = [];
     let typingMessage = '';
@@ -122,24 +124,26 @@
         }
     }
 
+    let typingContent = typingMessage;
     function handleTextInput() {
-        console.log("Sent?")
-        server.sendPacket(TYPING_REQUEST_ID, {
-            contextId: contact.id
-        })
+        if (!isSelfTyping) {
+            continuousTyping();
+        }
     }
 
-    function isCharacterKeyPress(evt: KeyboardEvent) {
-        if (typeof evt.which == "undefined") {
-            // This is IE, which only fires keypress events for printable keys
-            return true;
-        } else if (typeof evt.which == "number" && evt.which > 0) {
-            // In other browsers except old versions of WebKit, evt.which is
-            // only greater than zero if the keypress is a printable key.
-            // We need to filter out backspace and ctrl/alt/meta key combinations
-            return !evt.ctrlKey && !evt.metaKey && !evt.altKey && evt.which != 8;
-        }
-        return false;
+    function continuousTyping() {
+        isSelfTyping = true;
+        server.sendPacket(TYPING_REQUEST_ID, {
+            contextId: contact.id
+        });
+        setTimeout(() => {
+            if (typingContent === typingMessage) {
+                isSelfTyping = false;
+            } else {
+                typingContent = typingMessage;
+                continuousTyping()
+            }
+        }, TYPING_DELAY * 0.7);
     }
 </script>
 
