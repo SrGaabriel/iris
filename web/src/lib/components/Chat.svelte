@@ -37,7 +37,7 @@
         messagesElement = document.getElementById('messages');
         inputElement = document.getElementById('send-input')! as HTMLTextAreaElement;
 
-        document.body.addEventListener('click', (event) => {
+        document.body.addEventListener('click', () => {
             if (openContextMenu) {
                 toggleContextMenu(openContextMenu, false);
             }

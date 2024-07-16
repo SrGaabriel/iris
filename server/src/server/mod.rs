@@ -30,7 +30,7 @@ pub async fn subscribe_chat_handshake(
     Extension(state): Extension<SharedState>,
     request: axum::http::Request<axum::body::Body>
 ) -> impl IntoResponse {
-    let subprotocols = request.headers().get("Sec-WebSocket-Protocol").and_then(|hv| {
+    let _ = request.headers().get("Sec-WebSocket-Protocol").and_then(|hv| {
         Some(hv.to_str().ok().unwrap_or_default())
     });
     let user = request.extensions().get::<User>().cloned().expect("User not found");

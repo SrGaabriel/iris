@@ -1,5 +1,3 @@
-use chrono::Timelike;
-
 pub struct SnowflakeIssuer {
     issuer_id: u8,
     worker_id: u8,
