@@ -5,6 +5,7 @@
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
     import type TargetedStore from "../../util/targetedStore.ts";
     import {getTimestamp, getTimestampFormatted} from "$lib/util/snowflake.ts";
+    import {quintOut} from "svelte/easing";
     import {
         MESSAGE_DELETED_ID,
         MESSAGE_EDITED_ID,
@@ -12,6 +13,9 @@
         TYPING_REQUEST_ID
     } from "../../interaction/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
+    import {crossfade} from "svelte/transition";
+    import Alert from "$lib/components/Alert.svelte";
+    import {writable} from "svelte/store";
 
     export let token: string;
     export let user: User;
@@ -35,6 +39,12 @@
 
         document.body.addEventListener('click', (event) => {
             if (openContextMenu) {
+                toggleContextMenu(openContextMenu, false);
+            }
+        });
+
+        document.body.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && openContextMenu) {
                 toggleContextMenu(openContextMenu, false);
             }
         });
@@ -191,6 +201,20 @@
     function toggleContextMenu(messageId: string, on: boolean | null = null) {
         if (on === null) {
             openContextMenu = openContextMenu === messageId ? null : messageId;
+            setTimeout(() => {
+                const contextMenuContent = document.getElementById(`message-context-menu-content-${messageId}`);
+                if (contextMenuContent) {
+                    const messageText = document.getElementById(`message-text-${messageId}`);
+                    if (!messageText) return;
+                    const sent = contextMenuContent.classList.contains('sent');
+                    contextMenuContent.style.top = `${messageText.getBoundingClientRect().top - 40}px`;
+                    if (sent) {
+                        contextMenuContent.style.right = `${document.body.clientWidth - messageText.getBoundingClientRect().right}px`;
+                    } else {
+                        contextMenuContent.style.left = `${messageText.getBoundingClientRect().left}px`;
+                    }
+                }
+            }, 50);
         } else {
             openContextMenu = on ? messageId : null;
         }
@@ -251,12 +275,33 @@
             }
         }).then((response) => {
             if (response.status === 204) {
+                if (messageId === editingMessage?.id)
+                    editingMessage = null;
                 messages = messages.filter((message) => message.id !== messageId);
             }
         }).catch((error) => {
             console.error(error);
         });
     }
+
+    const [send, receive] = crossfade({
+        duration: (d) => Math.sqrt(d * 200),
+
+        fallback(node, params) {
+            const style = getComputedStyle(node);
+            const transform = style.transform === 'none' ? '' : style.transform;
+
+            return {
+                duration: 600,
+                easing: quintOut,
+                css: (t) => `
+				transform: ${transform} scale(${t});
+				opacity: ${t}`
+            };
+        }
+    });
+
+    let alertStore = writable();
 </script>
 
 <div class="chat" id="chat-{contact.id}">
@@ -265,27 +310,41 @@
     </div>
     <div class="messages" id="messages">
         <div class="messages-container" data-relevant="true">
-            {#each messages as message,i}
+            {#each messages as message,i (message.id)}
                 {@const sender = getUserObject(message.user_id)}
                 {@const sent = sender.id === user.id}
-                <div class="message-container {sent ? 'sent' : 'received'}">
+                <div class="message-container {sent ? 'sent' : 'received'}" in:receive={{key: message.id}} out:send={{key: message.id}}>
                     <div class="message-sender">
                         <span class="message-sender-name">{sender.name}</span>
                     </div>
                     {#if openContextMenu === message.id.toString()}
-                        <div class="message-context-menu" id={`message-context-menu-${message.id}`}>
+                        <div class={`message-context-menu ${sent ? 'sent' : 'received'}`} id={`message-context-menu-${message.id}`}>
                             <div class="message-context-menu-blur"></div>
-                            <div class="message-context-menu-content" style={`margin-${sent ? 'left' : 'right'}: auto;`}>
+                            <div class="message-context-menu-content {sent ? 'sent' : 'received'}" id={`message-context-menu-content-${message.id}`}>
+                                <button class="message-context-menu-item" on:click={() => {
+                                    navigator.clipboard.writeText(message.content);
+                                    alertStore.set({
+                                        type: 'success',
+                                        message: 'Copied message to clipboard'
+                                    })
+                                }}>
+                                    <span class="context-menu-tooltip">Copy</span>
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                                {#if sent}
                                 <button class="message-context-menu-item" on:click={() => startEditing(message)}>
+                                    <span class="context-menu-tooltip">Edit</span>
                                     <i class="fa-regular fa-pen-to-square"></i>
                                 </button>
                                 <button class="message-context-menu-item delete-item" on:click={() => deleteMessage(message.id)}>
+                                    <span class="context-menu-tooltip delete">Delete</span>
                                     <i class="fa-regular fa-trash-can"></i>
                                 </button>
+                                {/if}
                             </div>
                         </div>
                     {/if}
-                    <div class="message-text-container" on:contextmenu={handleMessageContextMenu} data-message-id={message.id}>
+                    <div class="message-text-container" on:contextmenu={handleMessageContextMenu} data-message-id={message.id} id={`message-text-${message.id}`}>
                         {#if editingMessage?.id === message.id}
                             <form on:submit|preventDefault={submit}>
                                 <textarea
@@ -322,7 +381,6 @@
                 </div>
             {/each}
         </div>
-        <div class="footer-space"></div>
     </div>
     {#if typing}
         <div class="typing-container">
@@ -330,6 +388,11 @@
             <span class="typing">{contact.name} is currently typing...</span>
         </div>
     {/if}
+    <div class="alert-container">
+        <div class="alert-position">
+            <Alert alertStore={alertStore}/>
+        </div>
+    </div>
     <div class="send-container">
         <div class="send-input-container">
             <textarea
@@ -401,8 +464,7 @@
         padding: 10px 18px;
         border-radius: 12px;
         width: auto;
-        max-width: 300px;
-        background-color: red;
+        max-width: 200px;
         font-family: 'DM Sans', sans-serif;
         font-size: 17px;
         text-wrap: auto;
@@ -547,6 +609,7 @@
     }
 
     .message-context-menu {
+        position: absolute;
         display: flex;
         top: 0;
         right: 0;
@@ -556,17 +619,43 @@
         border-radius: 512px;
     }
 
+    .message-context-menu.sent {
+        align-items: flex-end;
+        justify-content: right;
+    }
+
     .message-context-menu-content {
-        position: relative;
+        display: flex;
+        position: absolute;
         z-index: 6;
         border-radius: 512px;
-        margin: 24px 0;
         background-color: var(--heavy-constrast);
+        animation: content-open 0.4s forwards;
+    }
+
+    .message-context-menu-content.sent {
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
+
+    @keyframes content-open {
+        0% {
+            transform: scaleX(0);
+        }
+        100% {
+            transform: scaleX(1);
+        }
     }
 
     .message-context-menu-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
         font-family: 'DM Sans', sans-serif;
-        font-size: 16px;
+        font-size: 24px;
         color: var(--text-color);
         background-color: transparent;
         border: none;
@@ -580,6 +669,36 @@
     .message-context-menu-item:hover {
         background-color: var(--background);
     }
+
+    .message-context-menu-item:hover .context-menu-tooltip {
+        animation: tooltip 0.1s forwards;
+        display: block;
+    }
+
+    .context-menu-tooltip {
+        display: none;
+        position: absolute;
+        background-color: var(--background);
+        border-radius: 512px;
+        padding: 4px 12px;
+        font-size: 14px;
+    }
+
+    @keyframes tooltip {
+        0% {
+            bottom: 64px;
+            opacity: 0;
+        }
+        100% {
+            bottom: 80px;
+            opacity: 1;
+        }
+    }
+
+    .context-menu-tooltip.delete {
+        color: #d95252;
+    }
+
     .delete-item {
         color: #d95252;
     }
@@ -604,5 +723,18 @@
         100% {
             backdrop-filter: blur(10px);
         }
+    }
+
+    .alert-container {
+        position: relative;
+        width: 100%;
+        height: 0;
+    }
+    .alert-position {
+        position: absolute;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>
