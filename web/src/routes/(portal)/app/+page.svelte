@@ -10,7 +10,7 @@
         CONTACT_TYPING_ID,
         CONTEXT_READ_ID,
         MESSAGES_READ_ID,
-        TEXT_MESSAGE_ID
+        MESSAGE_CREATED_ID
     } from "../../../interaction/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
 
@@ -43,7 +43,7 @@
                 return;
             }
             switch (packetId) {
-                case TEXT_MESSAGE_ID: {
+                case MESSAGE_CREATED_ID: {
                     messageStore.set(message);
                     if (message.userId === data.user.id)
                         return;

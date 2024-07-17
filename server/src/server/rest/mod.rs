@@ -75,7 +75,33 @@ pub struct PrivateMessage {
     pub user_id: i64,
     pub context: i64,
     pub receipt: i16,
-    pub edited: bool
+    pub edited: bool,
+    pub reply_to: Option<i64>
+}
+
+#[derive(Serialize)]
+pub struct CompletePrivateMessage {
+    pub id: i64,
+    pub content: String,
+    pub user_id: i64,
+    pub context: i64,
+    pub receipt: i16,
+    pub edited: bool,
+    pub reply_to: Option<PrivateMessage>
+}
+
+impl CompletePrivateMessage {
+    pub fn with_reply(message: &crate::entity::message::Message, reply_message: Option<PrivateMessage>) -> Self {
+        CompletePrivateMessage {
+            id: message.id,
+            content: String::from(&message.content),
+            user_id: message.user_id,
+            context: message.context,
+            receipt: message.reception_status,
+            edited: message.edited,
+            reply_to: reply_message
+        }
+    }
 }
 
 impl From<&crate::entity::message::Message> for PrivateMessage {
@@ -86,7 +112,8 @@ impl From<&crate::entity::message::Message> for PrivateMessage {
             user_id: message.user_id,
             context: message.context,
             receipt: message.reception_status,
-            edited: message.edited
+            edited: message.edited,
+            reply_to: message.reply_to
         }
     }
 }

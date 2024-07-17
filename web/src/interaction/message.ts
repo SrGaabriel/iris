@@ -8,7 +8,7 @@ export const TYPING_REQUEST_ID = 2;
 
 // CLIENTBOUND
 
-export const TEXT_MESSAGE_ID = 2;
+export const MESSAGE_CREATED_ID = 2;
 export const MESSAGES_READ_ID = 3;
 export const CONTACT_TYPING_ID = 4;
 export const MESSAGE_EDITED_ID = 5;
@@ -30,7 +30,7 @@ export function loadProto() {
     loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
 
     // CLIENTBOUND
-    loadProtoFile(TEXT_MESSAGE_ID, "TextMessage", true);
+    loadProtoFile(MESSAGE_CREATED_ID, "MessageCreated", true);
     loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
     loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
     loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);

@@ -47,7 +47,7 @@ pub struct TypingRequest {
 
 #[derive(Clone, PartialEq, Message)]
 #[packet(id = 2)]
-pub struct TextMessageResponse {
+pub struct MessageCreated {
     #[prost(int64, tag = "1")]
     pub id: i64,
     #[prost(string, tag = "2")]
@@ -56,6 +56,8 @@ pub struct TextMessageResponse {
     pub user_id: i64,
     #[prost(int64, tag = "4")]
     pub context: i64,
+    #[prost(int64, tag = "5", optional)]
+    pub reply_to: Option<i64>
 }
 
 #[derive(Clone, PartialEq, Message)]

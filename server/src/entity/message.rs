@@ -1,6 +1,7 @@
 use diesel::sql_types::{Nullable, Text, BigInt, SmallInt};
 use diesel::{allow_tables_to_appear_in_same_query, Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use crate::entity::user::users;
+use crate::server::rest::PrivateMessage;
 use crate::User;
 
 pub type ContextType = i16;
@@ -15,7 +16,8 @@ pub struct Message {
     pub context: i64,
     pub context_type: ContextType,
     pub reception_status: i16,
-    pub edited: bool
+    pub edited: bool,
+    pub reply_to: Option<i64>
 }
 
 diesel::table! {
@@ -28,7 +30,8 @@ diesel::table! {
         context -> BigInt,
         context_type -> SmallInt,
         reception_status -> SmallInt,
-        edited -> Bool
+        edited -> Bool,
+        reply_to -> Nullable<BigInt>
     }
 }
 

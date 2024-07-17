@@ -32,6 +32,7 @@
     let inputElement: any;
     $: openContextMenu = null;
     $: editingMessage = null;
+    $: replyingTo = null;
 
     onMount(() => {
         messagesElement = document.getElementById('messages');
@@ -46,6 +47,14 @@
         document.body.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && openContextMenu) {
                 toggleContextMenu(openContextMenu, false);
+                return;
+            }
+            if (event.key === 'Escape' && replyingTo) {
+                replyingTo = null;
+                return;
+            }
+            if (event.key === 'Escape') {
+                messagesElement.scrollTo(0, messagesElement.scrollHeight);
             }
         });
 
@@ -103,7 +112,7 @@
             if (!message) return;
             if (message.userId === contact.id) {
                 const newMessage = {
-                    ...message, user_id: message.userId
+                    ...message, user_id: message.userId, reply_to: message.replyTo
                 }
                 messages = [...messages, newMessage];
                 setTimeout(() => {
@@ -134,10 +143,12 @@
                 'Authorization': 'Bearer ' + token,
             },
             body: JSON.stringify({
-                content: typingMessage
+                content: typingMessage,
+                reply_to: replyingTo?.id
             })
         }).then(response => response.text()).then((text) => JSONbig.parse(text)).then((message) => {
             clearTimeout(typingTimeout);
+            replyingTo = null;
             isSelfTyping = false;
             messages = [...messages, message];
             typingMessage = '';
@@ -322,6 +333,12 @@
                             <div class="message-context-menu-blur"></div>
                             <div class="message-context-menu-content {sent ? 'sent' : 'received'}" id={`message-context-menu-content-${message.id}`}>
                                 <button class="message-context-menu-item" on:click={() => {
+                                    replyingTo = message;
+                                }}>
+                                    <span class="context-menu-tooltip">Reply</span>
+                                    <i class="fa-solid fa-reply"></i>
+                                </button>
+                                <button class="message-context-menu-item" on:click={() => {
                                     navigator.clipboard.writeText(message.content);
                                     alertStore.set({
                                         type: 'success',
@@ -344,7 +361,7 @@
                             </div>
                         </div>
                     {/if}
-                    <div class="message-text-container" on:contextmenu={handleMessageContextMenu} data-message-id={message.id} id={`message-text-${message.id}`}>
+                    <div class={`message-text-container ${sent ? 'sent' : 'received'}`} on:contextmenu={handleMessageContextMenu} data-message-id={message.id} id={`message-text-${message.id}`}>
                         {#if editingMessage?.id === message.id}
                             <form on:submit|preventDefault={submit}>
                                 <textarea
@@ -355,6 +372,40 @@
                                 />
                             </form>
                         {:else}
+                            {#if message.reply_to}
+                                {@const reply = messages.find((m) => m.id === message.reply_to || m.id === message.reply_to?.id)}
+                                <div class={`message-reply ${sent ? 'sent' : 'received'}`} on:click={() => {
+                                    if (!reply) return;
+                                    const replyMessage = messages.find((m) => m.id === message.reply_to || m.id === message.reply_to?.id);
+                                    if (replyMessage) {
+                                        const element = document.getElementById(`message-text-${replyMessage.id}`);
+                                        element.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    }
+                                }}>
+                                    <div class="message-reply-header">
+                                        <span class="message-reply-sender-name">{reply ? getUserObject(reply.user_id).name : 'Unknown'}</span>
+                                        •
+                                        {#if reply}
+                                            <span class="message-reply-header-text">{getTimestampFormatted(getTimestamp(reply.id))}</span>
+                                        {/if}
+                                        {#if reply?.edited}
+                                            •
+                                            <span class="message-reply-edited-text">
+                                                <i class="fa-solid fa-pen"></i>
+                                                Edited
+                                            </span>
+                                        {/if}
+                                    </div>
+                                    {#if reply}
+                                        <span class="message-reply-content">{reply.content}</span>
+                                    {:else}
+
+                                        <span class="message-reply-content deleted">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                            This message was either lost or deleted.</span>
+                                    {/if}
+                                </div>
+                            {/if}
                             <span
                                     class={`message ${sent ? 'sent' : 'received'}`}
                                     data-only-emojis={isMessageMadeOfOnlyEmojis(message.content)}
@@ -394,6 +445,15 @@
         </div>
     </div>
     <div class="send-container">
+        {#if replyingTo}
+            <div class="replying-to">
+                <span class="replying-to-text">Replying to:</span>
+                <span class="replying-to-content">{replyingTo.content}</span>
+                <button class="replying-to-close" on:click={() => replyingTo = null}>
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        {/if}
         <div class="send-input-container">
             <textarea
                     id="send-input"
@@ -461,7 +521,6 @@
     .message {
         color: var(--text-color);
         display: inline-block;
-        padding: 10px 18px;
         border-radius: 12px;
         width: auto;
         max-width: 200px;
@@ -484,12 +543,13 @@
         font-size: 32px;
     }
     .message-text-container {
-        border-radius: inherit;
+        border-radius: 6px;
+        padding: 10px 10px 10px 10px;
     }
-    .message.sent {
+    .message-text-container.sent {
         background-color: var(--chat-sender-color);
     }
-    .message.received {
+    .message-text-container.received {
         background-color: var(--chat-receiver-color);
     }
     .message-sender-name {
@@ -498,6 +558,78 @@
         font-size: 14px;
         margin-left: 2px;
         font-weight: 500;
+    }
+    .message-reply {
+        display: flex;
+        border-radius: 4px;
+        flex-direction: column;
+        padding: 7px 10px;
+        margin-right: auto;
+        max-width: 300px;
+        transition: background-color 0.4s;
+        cursor: pointer;
+        margin-bottom: 8px;
+    }
+    .message-reply.sent {
+        border-left: 4px solid var(--chat-sender-color-dark-contrast);
+        background-color: var(--chat-sender-color-contrast);
+    }
+    .message-reply.received {
+        border-left: 4px solid var(--chat-receiver-color-dark-contrast);
+        background-color: var(--chat-receiver-color-contrast);
+    }
+    .message-reply:hover {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+    }
+    .message-reply.sent:hover {
+        background-color: var(--chat-sender-color-contrast-hover);
+    }
+    .message-reply.received:hover {
+        background-color: var(--chat-receiver-color-contrast-hover);
+    }
+    .message-reply-header {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .message-reply-header-text {
+        font-size: 14px;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--reply-color-details);
+    }
+    .message-reply-edited-text {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--reply-color-details);
+    }
+    .message-reply-sender-name {
+        font-family: 'DM Sans', sans-serif;
+        color: var(--reply-color);
+        font-size: 14px;
+        margin-left: 2px;
+        font-weight: 600;
+    }
+    .message-reply-content {
+        font-family: 'DM Sans', sans-serif;
+        font-size: 14px;
+        color: var(--reply-color-content);
+        text-wrap: wrap;
+        word-wrap: normal;
+        overflow-wrap: normal;
+        word-break: break-word;
+        margin-top: 4px;
+    }
+    .message-reply-content.deleted {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-style: italic;
     }
     .message-details {
         display: flex;
@@ -520,6 +652,7 @@
         gap: 8px;
     }
     .send-container {
+        position: relative;
         display: flex;
         align-items: center;
         width: 95%;
@@ -529,7 +662,53 @@
         background-color: var(--background);
         margin: 24px;
     }
+    .replying-to {
+        position: absolute;
+        bottom: 64px;
+        border-radius: 16px 16px 0 0;
+        left: 0;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 12px;
+        height: 28px;
+        width: calc(100% - 20px);
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+        z-index: 2;
+        background-color: var(--heavy-constrast);
+        animation: reply 0.4s forwards;
+    }
+    .replying-to:hover {
+        background-color: var(--light-contrast);
+    }
+    .replying-to-text {
+        color: var(--text-color);
+        font-weight: 600;
+    }
+    .replying-to-content {
+        font-style: italic;
+        margin-left: 6px;
+    }
+    .replying-to-close {
+        border: none;
+        background-color: transparent;
+        color: #e56c6c;
+        margin-right: 12px;
+        cursor: pointer;
+        font-size: 20px;
+        margin-left: auto;
+    }
+    @keyframes reply {
+        0% {
+            transform: translateY(100%);
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
     .send-input-container {
+        position: relative;
+        z-index: 3;
         background-color: var(--light-contrast);
         width: 92%;
         min-height: 36px;

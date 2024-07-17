@@ -2,18 +2,18 @@ use axum::{debug_handler, Extension, Json};
 use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, Table};
+use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Table};
 use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
 
 use crate::entity::message::Message;
-use crate::entity::message::messages::{content, context, context_type, edited, id as messageId, user_id};
+use crate::entity::message::messages::{content, context, context_type, edited, id as messageId, reply_to, user_id};
 use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::message::messages::dsl::messages;
 use crate::entity::user::User;
-use crate::server::messages::{MessageDeleted, MessageEdited, TextMessageResponse};
-use crate::server::rest::{error, IrisResponse, no_content, ok, PrivateMessage};
+use crate::server::messages::{MessageDeleted, MessageEdited, MessageCreated};
+use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, no_content, ok, PrivateMessage};
 use crate::SharedState;
 
 #[debug_handler]
@@ -21,37 +21,57 @@ pub async fn create_message(
     Path(contact_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
-) -> IrisResponse<PrivateMessage> {
+) -> IrisResponse<CompletePrivateMessage> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
     let message = Json::from_bytes(request.into_body().collect().await.unwrap().to_bytes().as_ref());
     if message.is_err() {
         return error(StatusCode::BAD_REQUEST, "Invalid message")
     }
-    let message: Json<MessageCreationRequest> = message.unwrap();
+    let message: MessageCreationRequest = message.unwrap().0;
 
     let mut state = state.write().await;
+
+    let reply_message: Option<PrivateMessage> = if let Some(reply) = message.reply_to {
+        let query = messages
+            .filter(messageId.eq(reply))
+            .get_result::<Message>(&mut state.database).optional();
+
+        if query.is_err() {
+            return error(StatusCode::NOT_FOUND, "Reply not found");
+        }
+        let result = query.unwrap();
+        if result.is_none() {
+            return error(StatusCode::NOT_FOUND, "Reply not found");
+        }
+
+        Some(PrivateMessage::from(&result.unwrap()))
+    } else {
+        None
+    };
+
     let id: i64 = { state.snowflake_issuer.generate().value() as i64 };
     let new_message = Message {
         id,
         user_id: user.id,
-        content: message.0.content.clone(),
+        content: message.content.clone(),
         context: contact_id,
         context_type: 0,
         reception_status: 0,
-        edited: false
+        edited: false,
+        reply_to: message.reply_to
     };
 
-    let connection = &mut state.database;
     let inserted_message = diesel::insert_into(messages)
         .values(&new_message)
-        .get_result::<Message>(connection)
+        .get_result::<Message>(&mut state.database)
         .expect("Failed to insert message");
 
-    let message = TextMessageResponse {
+    let message = MessageCreated {
         id: inserted_message.id,
         content: inserted_message.content.clone(),
         user_id: inserted_message.user_id,
         context: inserted_message.context,
+        reply_to: inserted_message.reply_to
     };
     if let Some(tx) = state.packet_queue.get(&user.id) {
         tx.send(Box::new(message.clone())).then(|result| {
@@ -71,7 +91,7 @@ pub async fn create_message(
         }).await;
     }
 
-    ok(PrivateMessage::from(&inserted_message))
+    ok(CompletePrivateMessage::with_reply(&inserted_message, reply_message))
 }
 
 // This method will get the messages between the user and the specified contact
@@ -175,5 +195,7 @@ pub async fn delete_message(
 
 #[derive(Deserialize)]
 pub struct MessageCreationRequest {
-    pub content: String
+    pub content: String,
+    #[serde(default)]
+    pub reply_to: Option<i64>
 }
