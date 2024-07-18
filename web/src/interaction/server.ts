@@ -3,9 +3,9 @@ import {browser} from "$app/environment";
 import {decodePacket, encodePacket, loadProto, Packet} from "./message.ts";
 import TargetedStore, {CustomTargetedStore} from "../util/targetedStore.ts";
 
-export const SECURE = true;
+export const SECURE = false;
 export const PROTOCOL = SECURE ? "s" : "";
-export const DOMAIN = '4a84-2804-7f0-20-2fb2-55be-1edc-e86f-a2e1.ngrok-free.app';
+export const DOMAIN = 'localhost:3000';
 export const API = `http${PROTOCOL}://${DOMAIN}`;
 export const WEBSOCKET = `ws${PROTOCOL}://${DOMAIN}`;
 

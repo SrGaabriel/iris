@@ -106,6 +106,19 @@ pub async fn get_messages(
 
     let connection = &mut state.write().await.database;
     let query = r#"
+WITH reactions_with_me AS (
+    SELECT
+        reactions.reaction_id,
+        reactions.message_id,
+        reactions.emoji,
+        reactions.reaction_count,
+        bool_or(reaction_users.user_id = $1) AS me
+    FROM
+        reactions
+    LEFT JOIN reaction_users ON reactions.reaction_id = reaction_users.reaction_id
+    GROUP BY
+        reactions.reaction_id, reactions.message_id, reactions.emoji, reactions.reaction_count
+)
 SELECT
     messages.id,
     messages.user_id,
@@ -117,28 +130,17 @@ SELECT
     COALESCE(
         json_agg(
             json_build_object(
-                'count', reactions.reaction_count,
-                'me', CASE WHEN reaction_users.user_id = $1 THEN TRUE ELSE FALSE END,
-                'emoji', reactions.emoji,
-				'reaction', reactions.reaction_id
+                'reaction_id', reactions_with_me.reaction_id,
+                'count', reactions_with_me.reaction_count,
+                'me', reactions_with_me.me,
+                'emoji', reactions_with_me.emoji
             )
-        ) FILTER (WHERE reactions.message_id IS NOT NULL),
+        ) FILTER (WHERE reactions_with_me.message_id IS NOT NULL AND reactions_with_me.reaction_count > 0),
         '[]'
     ) AS reactions
 FROM
     messages
-LEFT JOIN (
-    SELECT
-		reactions.reaction_id,
-        reactions.message_id,
-        reactions.emoji,
-        COUNT(reactions.reaction_id) AS reaction_count
-    FROM
-        reactions
-    GROUP BY
-        reactions.reaction_id, reactions.message_id, reactions.emoji
-) AS reactions ON reactions.message_id = messages.id
-LEFT JOIN reaction_users ON reactions.reaction_id = reaction_users.reaction_id
+LEFT JOIN reactions_with_me ON reactions_with_me.message_id = messages.id
 WHERE
     messages.context_type = 0
     AND (
@@ -156,6 +158,7 @@ ORDER BY
     let bilateral_messages = query.load::<CompleteMessage>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| {
+        println!("{}", &m.reactions);
         IterablePrivateMessage {
             id: m.id,
             user_id: m.user_id,

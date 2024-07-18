@@ -12,14 +12,16 @@ use serde::{Deserialize, Serialize};
 pub struct Reaction {
     pub reaction_id: i32,
     pub message_id: i64,
-    pub emoji: String
+    pub emoji: String,
+    pub reaction_count: i32
 }
 
 diesel::table! {
     reactions (reaction_id) {
         reaction_id -> Integer,
         message_id -> BigInt,
-        emoji -> Varchar
+        emoji -> Varchar,
+        reaction_count -> Integer
     }
 }
 
@@ -75,6 +77,8 @@ pub struct ReactionSummary {
     pub count: i32,
     #[sql_type = "Bool"]
     pub me: bool,
+    #[sql_type = "Integer"]
+    pub reaction_id: i32
 }
 
 

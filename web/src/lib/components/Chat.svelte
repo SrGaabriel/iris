@@ -311,57 +311,97 @@
 
     let alertStore = writable();
 
-    function reactEmoji(message, emoji: string, reacted: boolean) {
-        if (reacted) {
-            fetch(`${API}/api/messages/${message.id}/reactions`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({
-                    reaction_type: emoji
-                })
-            }).then((response) => {
-                if (response.status === 204) {
-                    toggleContextMenu(message.id, false);
+    function reactEmoji(message, emoji: string) {
+        fetch(`${API}/api/messages/${message.id}/reactions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                reaction_type: emoji
+            })
+        }).then((response) => response.json()).then((data) => {
+            if (data) {
+                toggleContextMenu(message.id, false);
+                let existingReaction = message.reactions.find((reaction) => reaction.reaction_id === data.reaction_id);
+
+                if (existingReaction) {
+                    const newMessage = message = {
+                        ...message,
+                        reactions: message.reactions.map((reaction) => {
+                            if (reaction.emoji === emoji) {
+                                return {
+                                    ...reaction,
+                                    reaction_id: data.reaction_id,
+                                    count: data.reaction_count,
+                                    me: true
+                                };
+                            }
+                            return reaction;
+                        })
+                    };
+                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
+                } else {
                     const newMessage = message = {
                         ...message,
                         reactions: [
                             ...message.reactions,
                             {
+                                reaction_id: data.reaction_id,
                                 emoji: emoji,
-                                count: 1,
+                                count: data.reaction_count,
                                 me: true
                             }
                         ]
                     };
                     messages = messages.map((m) => m.id === message.id ? newMessage : m);
                 }
-            }).catch((error) => {
-                console.error(error);
-            });
-        } else {
-            fetch(`${API}/api/messages/${message.id}/reactions`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({
-                    reaction_type: emoji
-                })
-            }).then((response) => {
-                if (response.status === 204) {
-                    // toggleContextMenu(message.id, false);
-                    // const newMessage = message = {
-                    //     ...message,
-                    //     reactions: message.reactions.filter((reaction) => reaction.emoji !== emoji.emoji)
-                    // };
-                    // messages = messages.map((m) => m.id === message.id ? newMessage : m);
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
+    }
+
+    function removeReaction(message, reactionId) {
+        let reaction = message.reactions.find((reaction) => reaction.reaction_id === reactionId);
+        console.log(reaction);
+        if (!reaction) return;
+        fetch(`${API}/api/messages/${message.id}/reactions/${reactionId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        }).then((response) => {
+            if (response.status === 204) {
+                toggleContextMenu(message.id, false);
+                let currentCount = message.reactions.find((reaction) => reaction.reaction_id === reactionId)?.count || 0;
+
+                if (currentCount === 1) {
+                    const newMessage = message = {
+                        ...message,
+                        reactions: message.reactions.filter((reaction) => reaction.reaction_id !== reactionId)
+                    };
+                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
+                } else {
+                    const newMessage = message = {
+                        ...message,
+                        reactions: message.reactions.map((reaction) => {
+                            if (reaction.reaction_id === reactionId) {
+                                return {
+                                    ...reaction,
+                                    count: reaction.count - 1,
+                                    me: false
+                                };
+                            }
+                            return reaction;
+                        })
+                    };
+                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
                 }
-            }).catch((error) => {
-                console.error(error);
-            });
-        }
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
     }
 </script>
 
@@ -389,7 +429,7 @@
                                     <span class="context-menu-tooltip">React</span>
                                     {#if reacting}
                                         <EmojiMenu onClick={(emoji) => {
-                                            reactEmoji(message, emoji.emoji, !message.reactions.some((reaction) => reaction.emoji === emoji.emoji));
+                                            reactEmoji(message, emoji.emoji);
                                         }}/>
                                     {/if}
                                     <i class="fa-regular fa-face-grin-tongue-wink"></i>
@@ -479,7 +519,11 @@
                         <div class="reactions">
                             {#each message.reactions as reaction}
                                 <button class={`reaction ${reaction.me ? 'reacted' : ''}`} on:click={() => {
-                                    reactEmoji(message, reaction.emoji, !reaction.me);
+                                    if (reaction.me) {
+                                        removeReaction(message, reaction.reaction_id);
+                                    } else {
+                                        reactEmoji(message, reaction.emoji);
+                                    }
                                 }}>{reaction.emoji} {reaction.count}</button>
                             {/each}
                         </div>

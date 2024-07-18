@@ -134,10 +134,12 @@ pub struct IterablePrivateMessage {
 
 #[derive(Deserialize)]
 pub struct ReactionAddRequest {
+    pub reaction_id: Option<i32>,
     pub reaction_type: String,
 }
 
-#[derive(Deserialize)]
-pub struct ReactionRemoveRequest {
-    pub count: i32,
+#[derive(Serialize)]
+pub struct ReactionAddResponse {
+    pub reaction_id: i32,
+    pub reaction_count: i32
 }
