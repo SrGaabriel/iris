@@ -10,6 +10,12 @@
 
     export let onClick;
 
+    export let bottom = 0;
+    export let top = 0;
+    export let left = 0;
+    export let right = 0;
+    export let center = false;
+
     function createReducedData() {
         return inefficientData.map(category => {
             return {
@@ -31,7 +37,7 @@
             return category.emojis;
         }
         return category.emojis.filter(emoji => {
-            return emoji.name.toLowerCase().startsWith(term.toLowerCase());
+            return emoji.name.toLowerCase().indexOf(term.toLowerCase()) >= 0;
         });
     }
 
@@ -111,9 +117,16 @@
             });
         }, 30);
     }
+
+    function createPositionString() {
+        if (!center) {
+            return `top: ${top}px; bottom: ${bottom}px; left: ${left}px; right: ${right}px`;
+        }
+        return `top: 50%; left: 50%; transform: translate(-50%, -50%)`;
+    }
 </script>
 
-<div class="menu">
+<div class="menu" style={createPositionString()}>
     <div class="header">
         <input
                 id="search-box"
@@ -165,6 +178,7 @@
         background-color: var(--light-contrast);
         cursor: default;
         overflow: hidden;
+        margin-top: auto;
         box-shadow: 0 0 12px var(--background);
     }
     .header {

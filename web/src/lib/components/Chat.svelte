@@ -43,6 +43,7 @@
     $: editingMessage = null;
     $: replyingTo = null;
     $: reacting = false;
+    $: addingEmoji = false;
 
     onMount(() => {
         messagesElement = document.getElementById('messages');
@@ -56,6 +57,10 @@
             }
             if (event.key === 'Escape' && replyingTo) {
                 replyingTo = null;
+                return;
+            }
+            if (event.key === 'Escape' && editingMessage) {
+                editingMessage = null;
                 return;
             }
             if (event.key === 'Escape') {
@@ -79,7 +84,7 @@
                 submit();
                 return;
             }
-            if (document.activeElement !== inputElement && !editingMessage && !openContextMenu) {
+            if (document.activeElement !== inputElement && !editingMessage && !openContextMenu && !addingEmoji) {
                 inputElement.focus();
             }
         });
@@ -216,6 +221,7 @@
     }
 
     function toggleContextMenu(messageId: string, on: boolean | null = null) {
+        addingEmoji = false;
         if (on === null) {
             openContextMenu = openContextMenu === messageId ? null : messageId;
             setTimeout(() => {
@@ -234,6 +240,11 @@
             }, 50);
         } else {
             openContextMenu = on ? messageId : null;
+            if (!on) {
+                reacting = false;
+                replyingTo = null;
+                editingMessage = null;
+            }
         }
     }
 
@@ -388,9 +399,36 @@
             messages = messages.map((m) => m.id === message.id ? newMessage : m);
         }
     }
+
+    function calculateAddingEmojiPickerPosition(): {x,y} {
+        const emojiAddButton = document.getElementById('add-emoji-button');
+        if (!emojiAddButton) return {x:100, y:100};
+        const rect = emojiAddButton.getBoundingClientRect();
+        console.log(rect.bottom);
+        const y =  window.innerHeight - rect.bottom + 80;
+        return {x: rect.left, y};
+    }
+
+    function calculateReactingEmojiPickerPosition(messageId): {x,y} {
+        const messageText = document.getElementById(`message-text-${messageId}`);
+        if (!messageText) return {x:100, y:100};
+        const rect = messageText.getBoundingClientRect();
+        const y = rect.top - 80;
+        return {x: rect.left, y};
+    }
 </script>
 
 <div class="chat" id="chat-{contact.id}">
+    {#if reacting}
+        <EmojiMenu onClick={(emoji) => {
+            reactEmoji(message, emoji.emoji);
+        }} center={true}/>
+    {:else if addingEmoji}
+        {@const position = calculateAddingEmojiPickerPosition()}
+        <EmojiMenu onClick={(emoji) => {
+            typingMessage += emoji.emoji;
+        }} bottom={position.y} left={position.x}/>
+    {/if}
     <div class="header">
         <span class="contact-name">{contact?.name}</span>
     </div>
@@ -407,40 +445,40 @@
                         <div class={`message-context-menu ${sent ? 'sent' : 'received'}`} id={`message-context-menu-${message.id}`}>
                             <div class="message-context-menu-blur" on:click={() => {
                                 toggleContextMenu(message.id, false);
-                                reacting = false;
                             }}></div>
                             <div class="message-context-menu-content {sent ? 'sent' : 'received'}" id={`message-context-menu-content-${message.id}`}>
                                 <button class="message-context-menu-item" on:click={() => { reacting = true; }}>
                                     <span class="context-menu-tooltip">React</span>
-                                    {#if reacting}
-                                        <EmojiMenu onClick={(emoji) => {
-                                            reactEmoji(message, emoji.emoji);
-                                        }}/>
-                                    {/if}
                                     <i class="fa-regular fa-face-grin-tongue-wink"></i>
                                 </button>
                                 <button class="message-context-menu-item" on:click={() => {
+                                    toggleContextMenu(message.id, false);
                                     replyingTo = message;
                                 }}>
                                     <span class="context-menu-tooltip">Reply</span>
                                     <i class="fa-solid fa-reply"></i>
                                 </button>
                                 <button class="message-context-menu-item" on:click={() => {
+                                    toggleContextMenu(message.id, false);
                                     navigator.clipboard.writeText(message.content);
                                     alertStore.set({
                                         type: 'success',
                                         message: 'Copied message to clipboard'
-                                    })
+                                    });
                                 }}>
                                     <span class="context-menu-tooltip">Copy</span>
                                     <i class="fa-regular fa-copy"></i>
                                 </button>
                                 {#if sent}
-                                <button class="message-context-menu-item" on:click={() => startEditing(message)}>
+                                <button class="message-context-menu-item" on:click={() =>
+                                    {toggleContextMenu(message.id, false); startEditing(message)}}
+                                >
                                     <span class="context-menu-tooltip">Edit</span>
                                     <i class="fa-regular fa-pen-to-square"></i>
                                 </button>
-                                <button class="message-context-menu-item delete-item" on:click={() => deleteMessage(message.id)}>
+                                <button class="message-context-menu-item delete-item" on:click={() =>
+                                    {toggleContextMenu(message.id, false); deleteMessage(message.id)}}
+                                >
                                     <span class="context-menu-tooltip delete">Delete</span>
                                     <i class="fa-regular fa-trash-can"></i>
                                 </button>
@@ -554,6 +592,9 @@
                 </button>
             </div>
         {/if}
+        <button class="input-add-emoji" on:click={() => addingEmoji = !addingEmoji} id="add-emoji-button">
+            <i class="fa-regular fa-face-grin-stars"></i>
+        </button>
         <div class="send-input-container">
             <textarea
                     id="send-input"
@@ -574,7 +615,7 @@
         flex-direction: column;
         align-items: center;
         width: 95%;
-        height: 95%;
+        height: 90vh;
         background-color: var(--light-contrast);
         border-radius: 12px;
     }
@@ -1044,5 +1085,25 @@
     .reaction.reacted {
         background-color: var(--reaction-selected-background);
         border: 2px solid var(--reaction-selected-border);
+    }
+    .input-add-emoji {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 80%;
+        aspect-ratio: 1/1;
+        border-radius: 50%;
+        background-color: var(--light-contrast);
+        color: var(--text-color);
+        margin-left: 6px;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .input-add-emoji:hover {
+        background-color: var(--input-add-emoji-hover);
+    }
+    .emoji-picker-container {
     }
 </style>

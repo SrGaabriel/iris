@@ -15,6 +15,7 @@ use crate::entity::message::messages::{content, context, edited, id as messageId
 use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::message::messages::dsl::messages;
 use crate::entity::user::User;
+use crate::server::gateway::context::send_packet_to_context;
 use crate::server::messages::{MessageCreated, MessageDeleted, MessageEdited};
 use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, IterablePrivateMessage, no_content, ok, PrivateMessage};
 use crate::SharedState;
@@ -76,23 +77,8 @@ pub async fn create_message(
         context: inserted_message.context,
         reply_to: inserted_message.reply_to
     };
-    if let Some(tx) = state.packet_queue.get(&user.id) {
-        tx.send(Box::new(message.clone())).then(|result| {
-            if let Err(e) = result {
-                eprintln!("Failed to send message: {:?}", e);
-            }
-            futures_util::future::ready(())
-        }).await;
-    }
-
-    if let Some(tx) = state.packet_queue.get(&contact_id) {
-        tx.send(Box::new(message)).then(|result| {
-            if let Err(e) = result {
-                eprintln!("Failed to send message: {:?}", e);
-            }
-            futures_util::future::ready(())
-        }).await;
-    }
+    send_packet_to_context(&mut state.packet_queue, user.id, Box::new(message.clone())).await;
+    send_packet_to_context(&mut state.packet_queue, contact_id, Box::new(message)).await;
 
     ok(CompletePrivateMessage::with_reply(&inserted_message, reply_message))
 }
@@ -202,20 +188,12 @@ pub async fn edit_message(
     }
     let message = message.unwrap();
 
-    if let Some(context_tx) = state.packet_queue.get(&message.context) {
-        let packet = MessageEdited {
-            message_id: message.id,
-            new_content,
-            editor_id: user.id,
-            context_id: message.context
-        };
-        context_tx.send(Box::new(packet)).then(|result| {
-            if let Err(e) = result {
-                eprintln!("Failed to send message: {:?}", e);
-            }
-            futures_util::future::ready(())
-        }).await;
-    }
+    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageEdited {
+        message_id: message.id,
+        new_content,
+        editor_id: user.id,
+        context_id: message.context
+    })).await;
 
     ok(PrivateMessage::from(&message))
 }
@@ -239,15 +217,10 @@ pub async fn delete_message(
     }
     let message = deleted.unwrap();
 
-    if let Some(context_tx) = state.packet_queue.get(&message.context) {
-        let packet = MessageDeleted { message_id, context_id: message.context };
-        context_tx.send(Box::new(packet)).then(|result| {
-            if let Err(e) = result {
-                eprintln!("Failed to send message: {:?}", e);
-            }
-            futures_util::future::ready(())
-        }).await;
-    }
+    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageDeleted {
+        message_id: message.id,
+        context_id: channel_id
+    })).await;
 
     no_content()
 }

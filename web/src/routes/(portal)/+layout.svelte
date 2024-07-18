@@ -28,6 +28,7 @@
         --reaction-counter: #525252;
         --reaction-selected-border: #2385be;
         --reaction-selected-background: #9fecf4;
+        --input-add-emoji-hover: #fff100;
     }
     :global(body:not(.lightmode)) {
         --text-color: #fcfcfc;
@@ -56,5 +57,6 @@
         --reaction-counter: #c9c9c9;
         --reaction-selected-border: #c20af4;
         --reaction-selected-background: #841c96;
+        --input-add-emoji-hover: #a81fb2;
     }
 </style>

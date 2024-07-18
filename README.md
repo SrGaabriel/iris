@@ -31,3 +31,4 @@ And many more...
 - [x] **Edit & delete messages:** edit and delete your messages
 - [x] **Receipt indicators:** see when your messages are read
 - [x] **Typing indicators:** see when someone is typing
+- [x] **Reactions:** react to messages with emojis
