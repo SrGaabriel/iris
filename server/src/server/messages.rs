@@ -97,3 +97,37 @@ pub struct MessageDeleted {
     #[prost(int64, tag = "2")]
     pub context_id: i64
 }
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 7)]
+pub struct ReactionAdded {
+    #[prost(int64, tag = "1")]
+    pub message_id: i64,
+    #[prost(int64, tag = "2")]
+    pub user_id: i64,
+    #[prost(string, tag = "3")]
+    pub emoji: String,
+    #[prost(int32, tag = "4")]
+    pub reaction_count: i32,
+    #[prost(int32, tag = "5")]
+    pub reaction_id: i32,
+    #[prost(int64, tag = "6")]
+    pub context_id: i64
+}
+
+#[derive(Clone, PartialEq, Message)]
+#[packet(id = 8)]
+pub struct ReactionRemoved {
+    #[prost(int64, tag = "1")]
+    pub message_id: i64,
+    #[prost(int64, tag = "2")]
+    pub user_id: i64,
+    #[prost(string, tag = "3")]
+    pub emoji: String,
+    #[prost(int32, tag = "4")]
+    pub reaction_count: i32,
+    #[prost(int32, tag = "5")]
+    pub reaction_id: i32,
+    #[prost(int64, tag = "6")]
+    pub context_id: i64
+}

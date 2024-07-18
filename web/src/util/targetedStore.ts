@@ -5,7 +5,7 @@ export class CustomTargetedStore<K extends string | number | symbol, V> {
 
     subscribe(key: K, callback: (value: V) => void) {
         if (!this.store[key]) {
-            this.store[key] = [callback];
+            this.store[key] = [];
         }
         this.store[key].push(callback);
     }

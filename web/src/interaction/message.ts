@@ -13,6 +13,8 @@ export const MESSAGES_READ_ID = 3;
 export const CONTACT_TYPING_ID = 4;
 export const MESSAGE_EDITED_ID = 5;
 export const MESSAGE_DELETED_ID = 6;
+export const REACTION_ADDED_ID = 7;
+export const REACTION_REMOVED_ID = 8;
 
 export function loadProto() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -35,6 +37,8 @@ export function loadProto() {
     loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
     loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);
     loadProtoFile(MESSAGE_DELETED_ID, "MessageDeleted", true);
+    loadProtoFile(REACTION_ADDED_ID, "ReactionAdded", true);
+    loadProtoFile(REACTION_REMOVED_ID, "ReactionRemoved", true);
 }
 
 function loadProtoFile(id: number, name: string, clientbound: boolean): any {

@@ -13,6 +13,7 @@
         MESSAGE_CREATED_ID
     } from "../../../interaction/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
+    import {fetchContacts} from "../../../interaction/api.ts"
 
     export let data;
     let contacts: any[] = [];
@@ -28,12 +29,7 @@
             keydownStore.dispatch(selectedContact.id, event);
         });
 
-        fetch(`${API}/api/contacts/@me`, {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + data.token
-            }
-        }).then(response => response.text()).then((text) => JSONbig.parse(text)).then(contact_list => {
+        fetchContacts(data.token).then(contact_list => {
             contacts = contact_list;
         });
         server.connect(data.token);

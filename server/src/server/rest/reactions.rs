@@ -16,10 +16,13 @@ use crate::SharedState;
 use http_body_util::BodyExt;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
+use futures_util::FutureExt;
 use crate::entity::reactions::reaction_users::user_id;
+use crate::server::gateway::context::send_packet_to_context;
+use crate::server::messages::{ReactionAdded, ReactionRemoved};
 
 pub async fn add_reaction(
-    Path(message_reaction_id): Path<i64>,
+    Path((channel_id, message_identifier)): Path<(i64, i64)>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<ReactionAddResponse> {
@@ -29,65 +32,77 @@ pub async fn add_reaction(
         return error(StatusCode::BAD_REQUEST, "Invalid reaction");
     }
     let request: ReactionAddRequest = request.unwrap().0;
+    let emoticon = request.reaction_type.clone();
 
-    let database = &mut state.write().await.database;
-    let transaction_result = database.transaction::<_, diesel::result::Error, _>(|connection|  {
-        let reaction_details: Option<(i32, i32)> = match request.reaction_id {
-            Some(message_reaction_id) => {
-                let count = diesel::update(reactionsTable)
-                    .filter(reaction_id.eq(message_reaction_id))
-                    .set(reaction_count.eq(reaction_count + 1))
-                    .returning(reaction_count)
-                    .get_result::<i32>(connection)?;
-                Some((message_reaction_id, count))
-            },
-            None => {
-                let reaction = diesel::update(reactionsTable)
-                    .filter(message_id.eq(message_reaction_id))
-                    .filter(emoji.eq(request.reaction_type.clone()))
-                    .set(reaction_count.eq(reaction_count + 1))
-                    .returning((reaction_id, reaction_count))
-                    .get_result::<(i32, i32)>(connection)
-                    .optional()?;
-
-                if let Some(tuple) = reaction {
-                    println!("Already found a reaction, no need for new one");
-                    Some(tuple)
-                } else {
-                    println!("Inserted");
-                    let new_reaction = ReactionInsert {
-                        message_id: message_reaction_id,
-                        emoji: request.reaction_type
-                    };
-                    let query = diesel::insert_into(reactionsTable)
-                        .values(&new_reaction)
-                        .returning(reaction_id)
+    let state = &mut state.write().await;
+    let transaction_result = {
+        state.database.transaction::<_, diesel::result::Error, _>(|connection| {
+            let reaction_details: Option<(i32, i32)> = match request.reaction_id {
+                Some(message_reaction_id) => {
+                    let count = diesel::update(reactionsTable)
+                        .filter(reaction_id.eq(message_reaction_id))
+                        .set(reaction_count.eq(reaction_count + 1))
+                        .returning(reaction_count)
                         .get_result::<i32>(connection)?;
-
-                    Some((query, 1))
+                    Some((message_reaction_id, count))
                 }
+                None => {
+                    let reaction = diesel::update(reactionsTable)
+                        .filter(message_id.eq(message_identifier))
+                        .filter(emoji.eq(request.reaction_type.clone()))
+                        .set(reaction_count.eq(reaction_count + 1))
+                        .returning((reaction_id, reaction_count))
+                        .get_result::<(i32, i32)>(connection)
+                        .optional()?;
+
+                    if let Some(tuple) = reaction {
+                        println!("Already found a reaction, no need for new one");
+                        Some(tuple)
+                    } else {
+                        println!("Inserted");
+                        let new_reaction = ReactionInsert {
+                            message_id: message_identifier,
+                            emoji: request.reaction_type,
+                        };
+                        let query = diesel::insert_into(reactionsTable)
+                            .values(&new_reaction)
+                            .returning(reaction_id)
+                            .get_result::<i32>(connection)?;
+
+                        Some((query, 1))
+                    }
+                }
+            };
+            if reaction_details.is_none() {
+                return Err(diesel::result::Error::NotFound);
             }
-        };
-        if reaction_details.is_none() {
-            return Err(diesel::result::Error::NotFound);
-        }
 
-        let (message_reaction_id, count) = reaction_details.unwrap();
-        let reaction_user = ReactionUserInsert {
-            reaction_id: message_reaction_id,
-            user_id: user.id,
-        };
+            let (message_reaction_id, count) = reaction_details.unwrap();
+            let reaction_user = ReactionUserInsert {
+                reaction_id: message_reaction_id,
+                user_id: user.id,
+            };
 
-        let user_query = diesel::insert_into(reactionUsersTable)
-            .values(&reaction_user)
-            .execute(connection)?;
-        Ok((message_reaction_id, count))
-    });
+            let user_query = diesel::insert_into(reactionUsersTable)
+                .values(&reaction_user)
+                .execute(connection)?;
+            Ok((message_reaction_id, count))
+        })
+    };
 
     if transaction_result.is_err() {
         return error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to add reaction");
     }
     let (message_reaction_id, count) = transaction_result.unwrap();
+
+    send_packet_to_context(&mut state.packet_queue, channel_id.clone(), Box::new(ReactionAdded {
+        message_id: message_identifier,
+        user_id: user.id,
+        emoji: emoticon,
+        reaction_count: count,
+        reaction_id: message_reaction_id,
+        context_id: channel_id
+    })).await;
 
     ok(ReactionAddResponse {
         reaction_id: message_reaction_id,
@@ -96,30 +111,42 @@ pub async fn add_reaction(
 }
 
 pub async fn remove_reaction(
-    Path((message_identifier, reaction_identifier)): Path<(i64, i32)>,
+    Path((channel_id, message_identifier, reaction_identifier)): Path<(i64, i64, i32)>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<()> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
 
-    let database = &mut state.write().await.database;
-    let transaction_result = database.transaction::<_, diesel::result::Error, _>(|connection|  {
-        // reduce one from reaction count
-        let reaction = diesel::update(reactionsTable)
-            .filter(reaction_id.eq(reaction_identifier))
-            .set(reaction_count.eq(reaction_count - 1))
-            .execute(connection)?;
+    let state = &mut state.write().await;
+    let transaction_result = {
+        state.database.transaction::<_, diesel::result::Error, _>(|connection| {
+            // reduce one from reaction count
+            let count = diesel::update(reactionsTable)
+                .filter(reaction_id.eq(reaction_identifier))
+                .set(reaction_count.eq(reaction_count - 1))
+                .returning(reaction_count)
+                .get_result::<i32>(connection)?;
 
-        let user_query = diesel::delete(reactionUsersTable)
-            .filter(reactionUsersTableReactionId.eq(reaction_identifier))
-            .filter(user_id.eq(user.id))
-            .execute(connection)?;
-        Ok(())
-    });
+            diesel::delete(reactionUsersTable)
+                .filter(reactionUsersTableReactionId.eq(reaction_identifier))
+                .filter(user_id.eq(user.id))
+                .execute(connection)?;
+            Ok((count))
+        })
+    };
 
     if transaction_result.is_err() {
         return error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to remove reaction");
     }
+
+    send_packet_to_context(&mut state.packet_queue, channel_id.clone(), Box::new(ReactionRemoved {
+        message_id: message_identifier,
+        user_id: user.id,
+        emoji: String::from(""),
+        reaction_count: transaction_result.unwrap(),
+        reaction_id: reaction_identifier,
+        context_id: channel_id
+    })).await;
 
     no_content()
 }

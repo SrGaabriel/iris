@@ -9,7 +9,7 @@
     import {
         MESSAGE_DELETED_ID,
         MESSAGE_EDITED_ID,
-        MESSAGES_READ_ID,
+        MESSAGES_READ_ID, REACTION_ADDED_ID, REACTION_REMOVED_ID,
         TYPING_REQUEST_ID
     } from "../../interaction/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
@@ -17,6 +17,14 @@
     import Alert from "$lib/components/Alert.svelte";
     import {writable} from "svelte/store";
     import EmojiMenu from "$lib/components/EmojiMenu.svelte";
+    import {
+        editMessage,
+        fetchMessages,
+        sendMessage,
+        excludeMessage,
+        addReaction,
+        deleteReaction
+    } from "../../interaction/api.ts";
 
     export let token: string;
     export let user: User;
@@ -105,6 +113,20 @@
             }
         });
 
+        server.store.subscribe(REACTION_ADDED_ID, (reaction) => {
+            if (!reaction) return;
+            const message = messages.find((m) => m.id === reaction.messageId);
+            if (!message) return;
+            locallyAddReaction(message, reaction.userId, reaction.reactionId, reaction.reactionCount, reaction.emoji);
+        });
+
+        server.store.subscribe(REACTION_REMOVED_ID, (reaction) => {
+            if (!reaction) return;
+            const message = messages.find((m) => m.id === reaction.messageId);
+            if (!message) return;
+            locallyRemoveReaction(message, reaction.userId, reaction.reactionId, reaction.reactionCount);
+        });
+
         store.subscribe((message) => {
             if (!message) return;
             if (message.userId === contact.id) {
@@ -117,13 +139,8 @@
                 }, 50);
             }
         });
-        fetch(`${API}/api/messages/${contact.id}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        }).then((request) => request.json()).then((messageList) => {
-            messages = messageList.reverse();
+        fetchMessages(token, contact.id).then((data) => {
+            messages = data.reverse();
         }).then(() => {
             messagesElement.scrollTo(0, messagesElement.scrollHeight);
         }).catch((error) => {
@@ -132,18 +149,10 @@
     })
 
     function submit() {
-        if (!typingMessage || typingMessage.trim().length === 0) return;
+        let trimmed = typingMessage.trim();
+        if (!typingMessage || trimmed.length === 0) return;
         messagesElement.scrollTo(0, messagesElement.scrollHeight);
-        fetch(`${API}/api/messages/${contact.id}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-            },
-            body: JSON.stringify({
-                content: typingMessage,
-                reply_to: replyingTo?.id
-            })
-        }).then(response => response.text()).then((text) => JSONbig.parse(text)).then((message) => {
+        sendMessage(token, contact.id, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             replyingTo = null;
             isSelfTyping = false;
@@ -241,23 +250,11 @@
 
     function submitEdit() {
         if (!editingMessage) return;
-        fetch(`${API}/api/messages/${editingMessage.id}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-            },
-            body: JSON.stringify({
-                content: editingMessage.content
-            })
-        }).then((response) => {
-            if (response.status === 200) {
+        editMessage(token, contact.id,editingMessage.id, editingMessage.content).then((data) => {
+            if (data) {
                 messages = messages.map((message) => {
                     if (message.id === editingMessage.id) {
-                        return {
-                            ...message,
-                            content: editingMessage.content,
-                            edited: true
-                        };
+                        return data;
                     }
                     return message;
                 });
@@ -276,12 +273,7 @@
     }
     
     function deleteMessage(messageId) {
-        fetch(`${API}/api/messages/${messageId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        }).then((response) => {
+        excludeMessage(token, contact.id, messageId).then((response) => {
             if (response.status === 204) {
                 if (messageId === editingMessage?.id)
                     editingMessage = null;
@@ -312,50 +304,10 @@
     let alertStore = writable();
 
     function reactEmoji(message, emoji: string) {
-        fetch(`${API}/api/messages/${message.id}/reactions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({
-                reaction_type: emoji
-            })
-        }).then((response) => response.json()).then((data) => {
+        addReaction(token, contact.id, message.id, emoji).then((data) => {
             if (data) {
                 toggleContextMenu(message.id, false);
-                let existingReaction = message.reactions.find((reaction) => reaction.reaction_id === data.reaction_id);
-
-                if (existingReaction) {
-                    const newMessage = message = {
-                        ...message,
-                        reactions: message.reactions.map((reaction) => {
-                            if (reaction.emoji === emoji) {
-                                return {
-                                    ...reaction,
-                                    reaction_id: data.reaction_id,
-                                    count: data.reaction_count,
-                                    me: true
-                                };
-                            }
-                            return reaction;
-                        })
-                    };
-                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
-                } else {
-                    const newMessage = message = {
-                        ...message,
-                        reactions: [
-                            ...message.reactions,
-                            {
-                                reaction_id: data.reaction_id,
-                                emoji: emoji,
-                                count: data.reaction_count,
-                                me: true
-                            }
-                        ]
-                    };
-                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
-                }
+                locallyAddReaction(message, user.id, data.reaction_id, data.reaction_count, emoji);
             }
         }).catch((error) => {
             console.error(error);
@@ -366,42 +318,75 @@
         let reaction = message.reactions.find((reaction) => reaction.reaction_id === reactionId);
         console.log(reaction);
         if (!reaction) return;
-        fetch(`${API}/api/messages/${message.id}/reactions/${reactionId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        }).then((response) => {
+        deleteReaction(token, contact.id, message.id, reactionId).then((response) => {
             if (response.status === 204) {
                 toggleContextMenu(message.id, false);
-                let currentCount = message.reactions.find((reaction) => reaction.reaction_id === reactionId)?.count || 0;
-
-                if (currentCount === 1) {
-                    const newMessage = message = {
-                        ...message,
-                        reactions: message.reactions.filter((reaction) => reaction.reaction_id !== reactionId)
-                    };
-                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
-                } else {
-                    const newMessage = message = {
-                        ...message,
-                        reactions: message.reactions.map((reaction) => {
-                            if (reaction.reaction_id === reactionId) {
-                                return {
-                                    ...reaction,
-                                    count: reaction.count - 1,
-                                    me: false
-                                };
-                            }
-                            return reaction;
-                        })
-                    };
-                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
-                }
+                locallyRemoveReaction(message, user.id, reactionId, reaction.count - 1);
             }
         }).catch((error) => {
             console.error(error);
         });
+    }
+
+    function locallyAddReaction(message, userId, reactionId, reactionCount, emoji) {
+        let existingReaction = message.reactions ? message.reactions.find((reaction) => reaction.reaction_id === reactionId) : null;
+
+        if (existingReaction) {
+            const newMessage = message = {
+                ...message,
+                reactions: message.reactions.map((reaction) => {
+                    if (reaction.emoji === emoji) {
+                        return {
+                            ...reaction,
+                            reaction_id: reactionId,
+                            count: reactionCount,
+                            me: reaction.me || userId === user.id
+                        };
+                    }
+                    return reaction;
+                })
+            };
+            messages = messages.map((m) => m.id === message.id ? newMessage : m);
+        } else {
+            const newMessage = message = {
+                ...message,
+                reactions: [
+                    ...(message.reactions || []),
+                    {
+                        reaction_id: reactionId,
+                        emoji: emoji,
+                        count: reactionCount,
+                        me: userId === user.id
+                    }
+                ]
+            };
+            messages = messages.map((m) => m.id === message.id ? newMessage : m);
+        }
+    }
+
+    function locallyRemoveReaction(message, userId, reactionId, reactionCount) {
+        if (reactionCount > 0) {
+            const newMessage = message = {
+                ...message,
+                reactions: message.reactions.map((reaction) => {
+                    if (reaction.reaction_id === reactionId) {
+                        return {
+                            ...reaction,
+                            count: reactionCount,
+                            me: reaction.me && userId !== user.id
+                        };
+                    }
+                    return reaction;
+                })
+            };
+            messages = messages.map((m) => m.id === message.id ? newMessage : m);
+        } else {
+            const newMessage = message = {
+                ...message,
+                reactions: message.reactions.filter((reaction) => reaction.reaction_id !== reactionId)
+            };
+            messages = messages.map((m) => m.id === message.id ? newMessage : m);
+        }
     }
 </script>
 
@@ -612,6 +597,7 @@
         align-items: center;
         width: 100%;
         height: 100%;
+        overflow-x: hidden;
         overflow-y: scroll;
     }
     .messages-container {

@@ -3,6 +3,7 @@ use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
 use diesel::{debug_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Table};
+use diesel::pg::Pg;
 use diesel::sql_types::BigInt;
 use diesel::prelude::*;
 use futures_util::FutureExt;
@@ -10,7 +11,7 @@ use http_body_util::BodyExt;
 use serde::Deserialize;
 
 use crate::entity::message::{CompleteMessage, Message};
-use crate::entity::message::messages::{content, edited, id as messageId, user_id};
+use crate::entity::message::messages::{content, context, edited, id as messageId, user_id};
 use crate::entity::message::messages::dsl::messages as messagesTable;
 use crate::entity::message::messages::dsl::messages;
 use crate::entity::user::User;
@@ -158,7 +159,6 @@ ORDER BY
     let bilateral_messages = query.load::<CompleteMessage>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| {
-        println!("{}", &m.reactions);
         IterablePrivateMessage {
             id: m.id,
             user_id: m.user_id,
@@ -173,7 +173,7 @@ ORDER BY
 }
 
 pub async fn edit_message(
-    Path(message_id): Path<i64>,
+    Path((channel_id, message_id)): Path<(i64, i64)>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<PrivateMessage> {
@@ -185,6 +185,7 @@ pub async fn edit_message(
     let message: Json<MessageCreationRequest> = message.unwrap();
 
     let query = messages
+        .filter(context.eq(channel_id))
         .filter(messageId.eq(message_id))
         .filter(user_id.eq(user.id));
 
@@ -220,7 +221,7 @@ pub async fn edit_message(
 }
 
 pub async fn delete_message(
-    Path(message_id): Path<i64>,
+    Path((channel_id, message_id)): Path<(i64, i64)>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<()> {
@@ -228,6 +229,7 @@ pub async fn delete_message(
 
     let state = &mut state.write().await;
     let query = messages
+        .filter(context.eq(channel_id))
         .filter(messageId.eq(message_id))
         .filter(user_id.eq(user.id));
     let deleted = diesel::delete(query).returning(messagesTable::all_columns()).get_result::<Message>(&mut state.database);
