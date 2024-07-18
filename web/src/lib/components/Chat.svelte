@@ -42,7 +42,7 @@
     $: openContextMenu = null;
     $: editingMessage = null;
     $: replyingTo = null;
-    $: reacting = false;
+    $: reactingTo = null;
     $: addingEmoji = false;
 
     onMount(() => {
@@ -52,7 +52,6 @@
         document.body.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && openContextMenu) {
                 toggleContextMenu(openContextMenu, false);
-                reacting = false;
                 return;
             }
             if (event.key === 'Escape' && replyingTo) {
@@ -160,6 +159,8 @@
         sendMessage(token, contact.id, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             replyingTo = null;
+            reactingTo = null;
+            addingEmoji = false;
             isSelfTyping = false;
             messages = [...messages, message];
             typingMessage = '';
@@ -241,7 +242,7 @@
         } else {
             openContextMenu = on ? messageId : null;
             if (!on) {
-                reacting = false;
+                reactingTo = null;
                 replyingTo = null;
                 editingMessage = null;
             }
@@ -419,9 +420,9 @@
 </script>
 
 <div class="chat" id="chat-{contact.id}">
-    {#if reacting}
+    {#if reactingTo}
         <EmojiMenu onClick={(emoji) => {
-            reactEmoji(message, emoji.emoji);
+            reactEmoji(reactingTo, emoji.emoji);
         }} center={true}/>
     {:else if addingEmoji}
         {@const position = calculateAddingEmojiPickerPosition()}
@@ -447,7 +448,7 @@
                                 toggleContextMenu(message.id, false);
                             }}></div>
                             <div class="message-context-menu-content {sent ? 'sent' : 'received'}" id={`message-context-menu-content-${message.id}`}>
-                                <button class="message-context-menu-item" on:click={() => { reacting = true; }}>
+                                <button class="message-context-menu-item" on:click={() => { reactingTo = message; }}>
                                     <span class="context-menu-tooltip">React</span>
                                     <i class="fa-regular fa-face-grin-tongue-wink"></i>
                                 </button>
