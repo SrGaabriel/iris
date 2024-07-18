@@ -10,5 +10,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="protobuf" level="application" />
     <orderEntry type="library" name="json-bigint-parser-browser" level="application" />
+    <orderEntry type="library" name="emoji-mart" level="application" />
   </component>
 </module>

@@ -1,14 +1,16 @@
 use axum::http::StatusCode;
 use axum::Json;
 use axum_extra::either::Either;
-use serde::Serialize;
-use crate::entity::user::User;
+use serde::{Deserialize, Serialize};
+use crate::entity::reactions::ReactionSummary;
+pub use crate::entity::user::User;
 
 pub mod auth;
 pub mod contacts;
 pub mod user;
 pub mod middlewares;
 pub mod messages;
+pub(crate) mod reactions;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 
@@ -116,4 +118,26 @@ impl From<&crate::entity::message::Message> for PrivateMessage {
             reply_to: message.reply_to
         }
     }
+}
+
+#[derive(Serialize)]
+pub struct IterablePrivateMessage {
+    pub id: i64,
+    pub content: String,
+    pub user_id: i64,
+    pub context: i64,
+    pub receipt: i16,
+    pub edited: bool,
+    pub reply_to: Option<i64>,
+    pub reactions: Vec<ReactionSummary>
+}
+
+#[derive(Deserialize)]
+pub struct ReactionAddRequest {
+    pub reaction_type: String,
+}
+
+#[derive(Deserialize)]
+pub struct ReactionRemoveRequest {
+    pub count: i32,
 }

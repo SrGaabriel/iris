@@ -25,6 +25,9 @@
         --reply-color: #3f3f3f;
         --reply-color-content: #6e6e6e;
         --reply-color-details: #8d8888;
+        --reaction-counter: #525252;
+        --reaction-selected-border: #2385be;
+        --reaction-selected-background: #9fecf4;
     }
     :global(body:not(.lightmode)) {
         --text-color: #fcfcfc;
@@ -50,5 +53,8 @@
         --reply-color: #e0e0e0;
         --reply-color-content: #c9c9c9;
         --reply-color-details: #b5b5b5;
+        --reaction-counter: #c9c9c9;
+        --reaction-selected-border: #c20af4;
+        --reaction-selected-background: #841c96;
     }
 </style>

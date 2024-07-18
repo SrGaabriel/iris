@@ -16,6 +16,7 @@
     import {crossfade} from "svelte/transition";
     import Alert from "$lib/components/Alert.svelte";
     import {writable} from "svelte/store";
+    import EmojiMenu from "$lib/components/EmojiMenu.svelte";
 
     export let token: string;
     export let user: User;
@@ -33,20 +34,16 @@
     $: openContextMenu = null;
     $: editingMessage = null;
     $: replyingTo = null;
+    $: reacting = false;
 
     onMount(() => {
         messagesElement = document.getElementById('messages');
         inputElement = document.getElementById('send-input')! as HTMLTextAreaElement;
 
-        document.body.addEventListener('click', () => {
-            if (openContextMenu) {
-                toggleContextMenu(openContextMenu, false);
-            }
-        });
-
         document.body.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && openContextMenu) {
                 toggleContextMenu(openContextMenu, false);
+                reacting = false;
                 return;
             }
             if (event.key === 'Escape' && replyingTo) {
@@ -74,7 +71,7 @@
                 submit();
                 return;
             }
-            if (document.activeElement !== inputElement && !editingMessage) {
+            if (document.activeElement !== inputElement && !editingMessage && !openContextMenu) {
                 inputElement.focus();
             }
         });
@@ -313,6 +310,59 @@
     });
 
     let alertStore = writable();
+
+    function reactEmoji(message, emoji: string, reacted: boolean) {
+        if (reacted) {
+            fetch(`${API}/api/messages/${message.id}/reactions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    reaction_type: emoji
+                })
+            }).then((response) => {
+                if (response.status === 204) {
+                    toggleContextMenu(message.id, false);
+                    const newMessage = message = {
+                        ...message,
+                        reactions: [
+                            ...message.reactions,
+                            {
+                                emoji: emoji,
+                                count: 1,
+                                me: true
+                            }
+                        ]
+                    };
+                    messages = messages.map((m) => m.id === message.id ? newMessage : m);
+                }
+            }).catch((error) => {
+                console.error(error);
+            });
+        } else {
+            fetch(`${API}/api/messages/${message.id}/reactions`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    reaction_type: emoji
+                })
+            }).then((response) => {
+                if (response.status === 204) {
+                    // toggleContextMenu(message.id, false);
+                    // const newMessage = message = {
+                    //     ...message,
+                    //     reactions: message.reactions.filter((reaction) => reaction.emoji !== emoji.emoji)
+                    // };
+                    // messages = messages.map((m) => m.id === message.id ? newMessage : m);
+                }
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
+    }
 </script>
 
 <div class="chat" id="chat-{contact.id}">
@@ -330,8 +380,20 @@
                     </div>
                     {#if openContextMenu === message.id.toString()}
                         <div class={`message-context-menu ${sent ? 'sent' : 'received'}`} id={`message-context-menu-${message.id}`}>
-                            <div class="message-context-menu-blur"></div>
+                            <div class="message-context-menu-blur" on:click={() => {
+                                toggleContextMenu(message.id, false);
+                                reacting = false;
+                            }}></div>
                             <div class="message-context-menu-content {sent ? 'sent' : 'received'}" id={`message-context-menu-content-${message.id}`}>
+                                <button class="message-context-menu-item" on:click={() => { reacting = true; }}>
+                                    <span class="context-menu-tooltip">React</span>
+                                    {#if reacting}
+                                        <EmojiMenu onClick={(emoji) => {
+                                            reactEmoji(message, emoji.emoji, !message.reactions.some((reaction) => reaction.emoji === emoji.emoji));
+                                        }}/>
+                                    {/if}
+                                    <i class="fa-regular fa-face-grin-tongue-wink"></i>
+                                </button>
                                 <button class="message-context-menu-item" on:click={() => {
                                     replyingTo = message;
                                 }}>
@@ -384,8 +446,8 @@
                                 }}>
                                     <div class="message-reply-header">
                                         <span class="message-reply-sender-name">{reply ? getUserObject(reply.user_id).name : 'Unknown'}</span>
-                                        •
                                         {#if reply}
+                                            •
                                             <span class="message-reply-header-text">{getTimestampFormatted(getTimestamp(reply.id))}</span>
                                         {/if}
                                         {#if reply?.edited}
@@ -413,6 +475,15 @@
                             >{@html message.content.replace(/\n/g, '<br>')}</span>
                         {/if}
                     </div>
+                    {#if message?.reactions?.length > 0}
+                        <div class="reactions">
+                            {#each message.reactions as reaction}
+                                <button class={`reaction ${reaction.me ? 'reacted' : ''}`} on:click={() => {
+                                    reactEmoji(message, reaction.emoji, !reaction.me);
+                                }}>{reaction.emoji} {reaction.count}</button>
+                            {/each}
+                        </div>
+                    {/if}
                     <div class="message-details {sent ? 'sent' : 'received'}">
                         {#if message.edited || !messages[i+1] || messages[i+1].user_id !== message.user_id}
                             {#if message.edited}
@@ -892,7 +963,7 @@
         width: 100%;
         height: 100%;
         z-index: 6;
-        animation: blur 0.4s forwards;
+        animation: blur 0.8s forwards;
     }
 
     @keyframes blur {
@@ -900,7 +971,7 @@
             backdrop-filter: blur(0);
         }
         100% {
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(6px);
         }
     }
 
@@ -915,5 +986,33 @@
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    .reactions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+    }
+    .reaction {
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 32px;
+        font-weight: 600;
+        color: var(--reaction-counter);
+        font-family: 'Roboto', sans-serif;
+        font-size: 15px;
+        background-color: var(--heavy-constrast);
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .reaction:hover {
+        border: 2px solid var(--reaction-counter);
+    }
+    .reaction.reacted {
+        background-color: var(--reaction-selected-background);
+        border: 2px solid var(--reaction-selected-border);
     }
 </style>

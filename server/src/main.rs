@@ -73,6 +73,8 @@ async fn main() {
         .route("/api/messages/:contact_id", get(server::rest::messages::get_messages))
         .route("/api/messages/:contact_id", put(server::rest::messages::edit_message))
         .route("/api/messages/:contact_id", delete(server::rest::messages::delete_message))
+        .route("/api/messages/:contact_id/reactions", post(server::rest::reactions::add_reaction))
+        .route("/api/messages/:contact_id/reactions", delete(server::rest::reactions::remove_reaction))
         .route_layer(
             middleware::from_fn(authorize)
         )
