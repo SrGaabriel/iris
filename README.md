@@ -14,7 +14,7 @@ The main technologies implemented in this project are:
 * **Protobuf:** powered by `prost` and `protobuf.js`
 * **Serialization:** powered by `serde`
 * **Authentication:** powered by `jwt`
-* **Hashing:** powered by the `argon2`
+* **Hashing:** powered by `argon2`
 * **Async:** powered by `tokio`
 * **Frontend:** powered by `Svelte`
 

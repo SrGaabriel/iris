@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import server from "../../interaction/server.ts";
-    import {CONTEXT_READ_ID} from "../../interaction/message.ts";
+    import {CONTEXT_READ_ID} from "$lib/network/message.ts";
+    import server from "$lib/network/server.ts";
 
     export let selfId: number;
     export let picture: string;
@@ -61,6 +61,7 @@
         )
         unreadCount = 0;
         selected = user;
+        window.location.href = `/app/contacts/${user.id}`;
     }
 </script>
 
@@ -99,11 +100,12 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 95%;
+        width: 90%;
         min-height: 75px;
         border: none;
         outline: none;
-        border-radius: 12px;
+        text-decoration: none;
+        border-radius: 6px;
         background-color: var(--light-contrast);
         transition: all 0.2s;
         user-select: none;
@@ -138,7 +140,7 @@
         width: 100%;
         height: 100%;
         padding: 10px 4px;
-        border-radius: 12px;
+        border-radius: 6px;
         flex-direction: column;
         background-color: var(--light-contrast);
     }

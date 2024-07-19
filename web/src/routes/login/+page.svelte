@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {API} from "../../interaction/server.ts";
+    import {API} from "$lib/network/server.ts";
 
     async function submit() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -19,7 +19,7 @@
         if (response.ok) {
             const data = await response.json();
             document.cookie = `token=${data.token}`;
-            window.location.href = '/app';
+            window.location.href = '/app/contacts';
         } else {
             result.innerText = 'Login failed';
         }

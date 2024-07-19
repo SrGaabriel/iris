@@ -1,6 +1,6 @@
 import {redirect} from "@sveltejs/kit";
-import {API} from "../../interaction/server.ts";
 import type {Self} from "$lib/user.ts";
+import {API} from "$lib/network/server.ts";
 
 export async function load({ cookies, url }) {
     if (!cookies.get('token')) {
@@ -17,6 +17,7 @@ export async function load({ cookies, url }) {
     });
     if (response.ok) {
         const user: Self = await response.json();
+        console.log("Loaded", token)
         return {user, token};
     } else {
         throw redirect(303, `/login?redirect=${url.pathname}`);
