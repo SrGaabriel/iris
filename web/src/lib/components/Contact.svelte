@@ -61,7 +61,7 @@
         )
         unreadCount = 0;
         selected = user;
-        window.location.href = `/app/contacts/${user.id}`;
+        history.pushState(null, '', `/app/contacts/${user.id}`);
     }
 </script>
 

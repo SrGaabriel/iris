@@ -10,7 +10,7 @@
         --biography-contact: #6a6a6a;
         --delicate-hover-contrast: 0, 0, 0;
         --blurred-username: #b1b1b1;
-        --selected-contact: #cceaf0;
+        --selected-contact: #e7e7e7;
         --theme-toggle-contrast: #262626;
         --message-sender-name: #6a6a6a;
         --chat-sender-color: #89dceb;

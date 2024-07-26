@@ -1,7 +1,7 @@
 use diesel::{allow_tables_to_appear_in_same_query, Identifiable, Insertable, Queryable, Selectable};
 use crate::entity::message::messages;
 use crate::entity::user::users;
-use diesel::sql_types::{BigInt, Text, Varchar, Integer, Bool};
+use diesel::sql_types::{BigInt, Text, Varchar, Integer, Bool, Serial};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct Reaction {
 
 diesel::table! {
     reactions (reaction_id) {
-        reaction_id -> Integer,
+        reaction_id -> Serial,
         message_id -> BigInt,
         emoji -> Varchar,
         reaction_count -> Integer
@@ -39,7 +39,7 @@ pub struct ReactionUser {
 
 diesel::table! {
     reaction_users (id) {
-        id -> Integer,
+        id -> Serial,
         reaction_id -> Integer,
         user_id -> BigInt
     }
@@ -77,7 +77,7 @@ pub struct ReactionSummary {
     pub count: i32,
     #[sql_type = "Bool"]
     pub me: bool,
-    #[sql_type = "Integer"]
+    #[sql_type = "Serial"]
     pub reaction_id: i32
 }
 
