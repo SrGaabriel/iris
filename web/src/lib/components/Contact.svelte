@@ -116,7 +116,7 @@
     .contact[data-selected="true"] {
         background-color: var(--selected-contact);
         cursor: default;
-        box-shadow: 0 0 7px black;
+        box-shadow: 0 0 2px black;
         transform: translateY(-2px);
     }
 

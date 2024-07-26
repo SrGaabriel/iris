@@ -65,9 +65,17 @@
 
 {#if alert}
     {@const alertId = Math.random()}
-    <div id="alert" class="alert" style="background-color: {typeToColor(alert.type)}" in:receive={{key: alertId}} out:send={{key: alertId}}>
+    {@const color = typeToColor(alert.type)}
+    {@const contrast = typeToColorContrast(alert.type)}
+    <div
+            id="alert"
+            class="alert"
+            style="background-color: {color}; box-shadow: 0 0 20px {color}"
+            in:receive={{key: alertId}}
+            out:send={{key: alertId}}
+    >
         <span class="message">{alert.message}</span>
-        <div class="fill" style="background-color: {typeToColorContrast(alert.type)}"></div>
+        <div class="fill" style="background-color: {contrast}"></div>
     </div>
 {/if}
 
@@ -87,6 +95,9 @@
         font-size: 14px;
         font-family: 'DM Sans', sans-serif;
         overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
     }
 
     .message {

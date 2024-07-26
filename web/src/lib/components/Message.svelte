@@ -17,6 +17,8 @@
     export let reactEmoji;
     export let removeReaction;
     export let submitEdit;
+    export let excludeMessage;
+    export let alertStore;
 
     function handleMessageContextMenu(event) {
         event.preventDefault();
@@ -73,9 +75,7 @@
     }
 
     function deleteMessage() {
-        if (confirm('Are you sure you want to delete this message?')) {
-            // deleteMessage(message);
-        }
+        excludeMessage(message.id)
     }
 </script>
 
@@ -103,10 +103,10 @@
                 <button class="message-context-menu-item" on:click={() => {
                     clearState();
                     navigator.clipboard.writeText(message.content);
-                    // alertStore.set({
-                    //     type: 'success',
-                    //     message: 'Copied message to clipboard'
-                    // });
+                    alertStore.set({
+                        type: 'success',
+                        message: 'Copied message to clipboard'
+                    });
                 }}>
                     <span class="context-menu-tooltip">Copy</span>
                     <i class="fa-regular fa-copy"></i>

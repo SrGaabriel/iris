@@ -22,7 +22,6 @@ pub struct IrisAuth;
 pub async fn authorize(mut req: Request, next: Next) -> Response {
     let headers = req.headers().clone();
     let auth = headers.get("Authorization").or(headers.get("Sec-Websocket-Protocol"));
-    println!("Now parsing: {}", req.uri().path());
     if auth.is_none() {
         return error::<String>(StatusCode::UNAUTHORIZED, "No authorization header provided").into_response();
     }

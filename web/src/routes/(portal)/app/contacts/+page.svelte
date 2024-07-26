@@ -90,11 +90,13 @@
     </div>
     <main class="block">
         {#if selectedContact}
-            <Chat
-                token={data.token}
-                user={data.user}
-                contact={selectedContact}
-            />
+            {#key selectedContact.id}
+                <Chat
+                    token={data.token}
+                    user={data.user}
+                    contact={selectedContact}
+                />
+            {/key}
         {/if}
     </main>
 </div>
@@ -102,8 +104,8 @@
 <style>
     .page {
         display: flex;
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
         color: #b1b1b1;
         background-color: var(--background);
         overflow: hidden;
@@ -120,9 +122,8 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        margin-top: 24px;
         width: 100%;
         padding: 0;
-        height: 95%;
+        height: 100%;
     }
 </style>

@@ -17,7 +17,6 @@ export async function load({ cookies, url }) {
     });
     if (response.ok) {
         const user: Self = await response.json();
-        console.log("Loaded", token)
         return {user, token};
     } else {
         throw redirect(303, `/login?redirect=${url.pathname}`);

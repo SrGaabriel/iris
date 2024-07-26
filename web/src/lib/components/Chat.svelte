@@ -2,7 +2,14 @@
     import EmojiMenu from "$lib/components/EmojiMenu.svelte";
     import {onMount} from "svelte";
     import Message from "$lib/components/Message.svelte";
-    import {addReaction, deleteReaction, editMessage, fetchMessages, sendMessage} from "$lib/network/api.ts";
+    import {
+        addReaction,
+        deleteReaction,
+        editMessage,
+        excludeMessage,
+        fetchMessages,
+        sendMessage
+    } from "$lib/network/api.ts";
     import server from "$lib/network/server.ts";
     import {
         CONTEXT_READ_ID,
@@ -52,7 +59,7 @@
 
     function loadMessages() {
         fetchMessages(token, contact.id).then((fetchedMessages) => {
-            messages = fetchedMessages;
+            messages = fetchedMessages.reverse();
         }).then(() => {
             scrollToBottom();
         }).catch((error) => {
@@ -124,6 +131,7 @@
     }
 
     function onBulkMessagesRead(reading) {
+        console.log("New reading", reading);
         if (reading.readerId === contact.id) {
             messages.forEach((message) => {
                 if (reading.messageIds.includes(message.id)) {
@@ -194,7 +202,7 @@
 
     function removeReaction(message, reactionId) {
         let reaction = message.reactions.find((reaction) => reaction.reaction_id === reactionId);
-        if (!reaction) return;
+        if (!reaction) return;noto-fonts-emoji
         deleteReaction(token, contact.id, message.id, reactionId).then((response) => {
             if (response.status === 204) {
                 locallyRemoveReaction(message, user.id, reactionId, reaction.count - 1);
@@ -303,6 +311,16 @@
             return contact;
         }
     }
+
+    function deleteMessage(messageId) {
+        excludeMessage(token, contact.id, messageId).then((response) => {
+            if (response.status === 204) {
+                messages = messages.filter((message) => message.id !== messageId);
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
+    }
 </script>
 
 <div class="chat">
@@ -335,10 +353,12 @@
                         clearState={clearState}
                         messageRepliesTo={messages.find((m) => m.id === message.reply_to || m.id === message.reply_to?.id)}
                         submitEdit={submitEdit}
+                        excludeMessage={deleteMessage}
                         bind:editingMessage={editingMessage}
                         bind:reactingTo={reactingTo}
                         bind:replyingTo={replyingTo}
                         bind:openContextMenu={openContextMenu}
+                        bind:alertStore={alertStore}
                 />
             {/each}
         </div>
@@ -386,10 +406,9 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        width: 90%;
-        height: 90%;
-        border-radius: 4px;
-        box-shadow: 0 0 2px 0 var(--reply-color);
+        width: 100%;
+        height: 100%;
+        border-left: 1px solid var(--thin-border);
         background-color: var(--light-contrast);
     }
     .header {
@@ -410,7 +429,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 100%;
+        height: 62.5vh;
         overflow-x: hidden;
         overflow-y: scroll;
     }
@@ -436,11 +455,11 @@
         position: absolute;
         bottom: 64px;
         border-radius: 16px 16px 0 0;
-        left: 0;
+        left: -1px;
         font-family: 'DM Sans', sans-serif;
         font-size: 12px;
         height: 28px;
-        width: calc(100% - 20px);
+        width: calc(100% - 19px);
         display: flex;
         align-items: center;
         padding-left: 20px;
@@ -448,16 +467,16 @@
         background-color: var(--heavy-constrast);
         animation: reply 0.4s forwards;
     }
-    .replying-to:hover {
-        background-color: var(--light-contrast);
-    }
     .replying-to-text {
         color: var(--text-color);
         font-weight: 600;
+        font-family: 'Roboto', sans-serif;
     }
     .replying-to-content {
+        color: var(--reply-to);
         font-style: italic;
-        margin-left: 6px;
+        font-family: 'Roboto', sans-serif;
+        margin-left: 4px;
     }
     .replying-to-close {
         border: none;
@@ -564,6 +583,7 @@
     }
     .alert-position {
         position: absolute;
+        z-index: 8;
         width: 100%;
         display: flex;
         align-items: center;
@@ -586,7 +606,5 @@
     }
     .input-add-emoji:hover {
         background-color: var(--input-add-emoji-hover);
-    }
-    .emoji-picker-container {
     }
 </style>
