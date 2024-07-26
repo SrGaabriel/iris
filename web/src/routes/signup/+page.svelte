@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {API} from "../../interaction/server.ts";
+    import {API} from "$lib/network/server.ts";
 
     async function submit() {
         const name = (document.getElementById('name') as HTMLInputElement).value;

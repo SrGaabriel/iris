@@ -18,6 +18,7 @@
     let keydownStore = new TargetedStore();
     $: typing = {};
     $: amITyping = false;
+    $: selectedContact = null;
 
     onMount(() => {
         loadContacts();
@@ -105,6 +106,6 @@
         margin-top: 24px;
         width: 100%;
         padding: 0;
-        height: 100%;
+        height: 95%;
     }
 </style>

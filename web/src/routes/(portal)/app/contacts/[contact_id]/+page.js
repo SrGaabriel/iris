@@ -6,6 +6,7 @@ export async function load({ params, parent }) {
     console.log(params.contact_id);
     console.log(contact);
     const messages = await fetchMessages(token, params.contact_id)
+    console.log(messages);
     return {
         contact, messages
     }

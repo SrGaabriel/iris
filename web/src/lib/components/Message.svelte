@@ -83,7 +83,7 @@
     <div class="message-sender">
         <span class="message-sender-name">{sender.name}</span>
     </div>
-    {#if openContextMenu === message.id.toString()}
+    {#if openContextMenu === message.id}
         <div class={`message-context-menu ${sent ? 'sent' : 'received'}`} id={`message-context-menu-${message.id}`}>
             <div class="message-context-menu-blur" on:click={() => {
                 clearState();

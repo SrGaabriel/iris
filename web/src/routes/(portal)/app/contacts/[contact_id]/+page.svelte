@@ -17,7 +17,7 @@
 
     export let data;
 
-    let messages;
+    let messages = [];
     let typingMessage = '';
     const user = data.user;
     const contact = data.contact;
@@ -36,6 +36,8 @@
     let alertStore = writable();
 
     onMount(() => {
+        console.log("Data", data);
+        console.log("Data", data.messages);
         messages = data.messages.reverse();
         messagesElement = document.getElementById('messages');
         inputElement = document.getElementById('send-input');
@@ -376,7 +378,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        width: 95%;
+        width: 90%;
         height: 90%;
         border-radius: 4px;
         box-shadow: 0 0 2px 0 var(--reply-color);
