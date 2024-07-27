@@ -1,8 +1,8 @@
-<script lang="ts">
-    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
-    import {browser} from "$app/environment";
+<!--This is a component, and not a layout page due to:-->
+<!--https://github.com/sveltejs/kit/issues/627-->
 
-    export let data;
+<script lang="ts">
+    import {browser} from "$app/environment";
 
     let isSidebarExpanded = false;
 
@@ -24,21 +24,8 @@
     <div class="background"></div>
     <div class="space">
         <div class="header">
-            <div class="icon-space">
-            </div>
-            <div class="theme-toggle-container">
-                <ThemeToggle/>
-            </div>
-            <div class="self-profile">
-                <img src="/assets/no_profile_picture.jpg" alt="Your profile picture" class="photo"/>
-                <div class="self-identifier">
-                    <div class="self-identifier-name">
-                        <span class="self-name">{data.user.name}</span>
-                        <span class="self-username">@{data.user.username}</span>
-                    </div>
-                    <span class="self-biography">A free thinker roaming Earth.</span>
-                </div>
-            </div>
+            <div class="icon-space"></div>
+            <slot name="header"></slot>
         </div>
         <div class="content">
             <div class={isSidebarExpanded ? 'sidebar expanded' : 'sidebar'}>
@@ -104,9 +91,16 @@
         background-color: var(--light-heavier-contrast);
         border-bottom: 1px solid var(--thin-border);
     }
+    .standard-header-info {
+        display: flex;
+        height: 100%;
+        width: 399px;
+        border-right: 1px solid var(--thin-border);
+    }
     .icon-space {
         height: 100%;
-        width: 72px;
+        width: 84.5px;
+        border-right: 1px solid var(--thin-border);
     }
     .self-profile {
         display: flex;

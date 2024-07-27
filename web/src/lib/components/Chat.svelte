@@ -21,6 +21,7 @@
     import Alert from "$lib/components/Alert.svelte";
     import {writable} from "svelte/store";
     import {TYPING_DELAY} from "$lib/constants.ts";
+    import {createCrossfade} from "$lib/animation/crossfade.ts";
 
     export let token;
     export let user;
@@ -42,6 +43,8 @@
     let userTyping = false;
     let typingTimeout = null;
     let alertStore = writable();
+
+    const [send, receive] = createCrossfade(200, 600);
 
     onMount(() => {
         messagesElement = document.getElementById('messages');
@@ -82,14 +85,17 @@
         if (event.key === 'Escape') {
             clearState()
         }
+        // Ignore keydown events if the user is already focused on an input element
 
         if (!event.key || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && document.activeElement === inputElement) {
             event.preventDefault();
             submit();
             return;
         }
-        if (document.activeElement !== inputElement && !editingMessage && !openContextMenu && !addingEmoji) {
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+            return;
+        if (!editingMessage && !openContextMenu && !addingEmoji) {
             inputElement.focus();
         }
     }
@@ -344,31 +350,30 @@
             typingMessage += emoji.emoji;
         }} bottom={position.y} left={position.x}/>
     {/if}
-    <div class="header">
-        <span class="contact-name">{contact?.name}</span>
-    </div>
     <div class="messages" id="messages">
         <div class="messages-container" data-relevant="true">
             {#each messages as message,i (message.id)}
-                <Message
-                        user={user}
-                        contact={contact}
-                        message={message}
-                        sent={message.user_id === user.id}
-                        sender={getUserObject(message.user_id)}
-                        followingMessage={messages[i + 1]}
-                        reactEmoji={reactEmoji}
-                        removeReaction={removeReaction}
-                        clearState={clearState}
-                        messageRepliesTo={messages.find((m) => m.id === message.reply_to || m.id === message.reply_to?.id)}
-                        submitEdit={submitEdit}
-                        excludeMessage={deleteMessage}
-                        bind:editingMessage={editingMessage}
-                        bind:reactingTo={reactingTo}
-                        bind:replyingTo={replyingTo}
-                        bind:openContextMenu={openContextMenu}
-                        bind:alertStore={alertStore}
-                />
+                <div in:receive={{key: message.id}} out:send={{key: message.id}}>
+                    <Message
+                            user={user}
+                            contact={contact}
+                            message={message}
+                            sent={message.user_id === user.id}
+                            sender={getUserObject(message.user_id)}
+                            followingMessage={messages[i + 1]}
+                            reactEmoji={reactEmoji}
+                            removeReaction={removeReaction}
+                            clearState={clearState}
+                            messageRepliesTo={messages.find((m) => m.id === message.reply_to || m.id === message.reply_to?.id)}
+                            submitEdit={submitEdit}
+                            excludeMessage={deleteMessage}
+                            bind:editingMessage={editingMessage}
+                            bind:reactingTo={reactingTo}
+                            bind:replyingTo={replyingTo}
+                            bind:openContextMenu={openContextMenu}
+                            bind:alertStore={alertStore}
+                    />
+                </div>
             {/each}
         </div>
     </div>
@@ -438,7 +443,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 62.5vh;
+        height: 72.5vh;
         overflow-x: hidden;
         overflow-y: scroll;
     }
