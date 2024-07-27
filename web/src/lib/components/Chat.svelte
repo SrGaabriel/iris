@@ -1,6 +1,6 @@
 <script>
     import EmojiMenu from "$lib/components/EmojiMenu.svelte";
-    import {onMount} from "svelte";
+    import {onDestroy, onMount} from "svelte";
     import Message from "$lib/components/Message.svelte";
     import {
         addReaction,
@@ -47,7 +47,7 @@
         messagesElement = document.getElementById('messages');
         inputElement = document.getElementById('send-input');
         loadMessages();
-        registerKeydown();
+        document.body.addEventListener('keydown', handleKeydown);
 
         server.store.subscribe(MESSAGE_CREATED_ID, onMessageCreate);
         server.store.subscribe(MESSAGE_EDITED_ID, onMessageEdit);
@@ -55,6 +55,17 @@
         server.store.subscribe(MESSAGES_READ_ID, onBulkMessagesRead);
         server.store.subscribe(REACTION_ADDED_ID, onReactionAdd);
         server.store.subscribe(REACTION_REMOVED_ID, onReactionRemoval);
+    });
+
+    onDestroy(() => {
+        document.body.removeEventListener('keydown', handleKeydown);
+
+        server.store.unsubscribe(MESSAGE_CREATED_ID, onMessageCreate);
+        server.store.unsubscribe(MESSAGE_EDITED_ID, onMessageEdit);
+        server.store.unsubscribe(MESSAGE_DELETED_ID, onMessageDelete);
+        server.store.unsubscribe(MESSAGES_READ_ID, onBulkMessagesRead);
+        server.store.unsubscribe(REACTION_ADDED_ID, onReactionAdd);
+        server.store.unsubscribe(REACTION_REMOVED_ID, onReactionRemoval);
     });
 
     function loadMessages() {
@@ -67,22 +78,20 @@
         });
     }
 
-    function registerKeydown() {
-        document.body.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                clearState()
-            }
+    function handleKeydown(event) {
+        if (event.key === 'Escape') {
+            clearState()
+        }
 
-            if (!event.key || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                submit();
-                return;
-            }
-            if (document.activeElement !== inputElement && !editingMessage && !openContextMenu && !addingEmoji) {
-                inputElement.focus();
-            }
-        });
+        if (!event.key || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submit();
+            return;
+        }
+        if (document.activeElement !== inputElement && !editingMessage && !openContextMenu && !addingEmoji) {
+            inputElement.focus();
+        }
     }
 
     function onMessageCreate(message) {

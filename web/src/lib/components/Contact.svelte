@@ -140,7 +140,7 @@
         width: 100%;
         height: 100%;
         padding: 10px 4px;
-        border-radius: 6px;
+        border-radius: 4px;
         flex-direction: column;
         background-color: var(--light-contrast);
     }
@@ -153,8 +153,8 @@
         content: "";
         z-index: 1;
         opacity: 0;
-        width: calc(100% + 1px);
-        height: calc(100% + 1px);
+        width: calc(100%);
+        height: calc(100%);
         background: radial-gradient(
                 1200px circle at var(--x) var(--y),
                 rgba(var(--delicate-hover-contrast), 0.07),
@@ -182,7 +182,7 @@
         opacity: 0;
         margin-bottom: 1px;
         width: calc(100% + 2px);
-        height: 100%;
+        height: calc(100%);
         background: radial-gradient(
             800px circle at var(--x) var(--y),
             rgba(var(--delicate-hover-contrast), 0.3),
