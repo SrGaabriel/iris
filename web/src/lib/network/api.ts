@@ -8,7 +8,18 @@ export async function fetchContacts(token: string) {
         }
     });
     const text = await response.text();
-    return JSONbig.parse(text);
+    return JSON.parse(text);
+}
+
+export async function fetchContact(token: string, contactId) {
+    const response = await fetch(`${API}/api/contacts/${contactId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    const text = await response.text();
+    return JSON.parse(text);
 }
 
 export async function fetchMessages(token: string, contactId) {
@@ -19,7 +30,7 @@ export async function fetchMessages(token: string, contactId) {
         }
     });
     const text = await response.text();
-    return JSONbig.parse(text);
+    return JSON.parse(text);
 }
 
 export async function sendMessage(token: string, contactId, content: string, replyingTo) {
@@ -35,7 +46,7 @@ export async function sendMessage(token: string, contactId, content: string, rep
         })
     });
     const text = await response.text();
-    return JSONbig.parse(text);
+    return JSON.parse(text);
 }
 
 // Submit edit
@@ -51,7 +62,7 @@ export async function editMessage(token: string, contactId, messageId, content: 
         })
     });
     const text = await response.text();
-    return JSONbig.parse(text);
+    return JSON.parse(text);
 }
 
 export async function excludeMessage(token: string, contactId, messageId) {

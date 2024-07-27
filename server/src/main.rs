@@ -60,7 +60,7 @@ async fn main() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_websockets=debug,tower_http=info,diesel=debug".into()),
+                .unwrap_or_else(|_| "example_websockets=debug,tower_http=debug                                      ,diesel=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -69,6 +69,7 @@ async fn main() {
         .route("/ws", get(server::subscribe_chat_handshake))
         .route("/api/users/@me", get(server::rest::user::get_self))
         .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
+        .route("/api/contacts/:contact_id", get(server::rest::contacts::get_contact))
         .route("/api/channels/:context_id/messages", post(server::rest::messages::create_message))
         .route("/api/channels/:context_id/messages", get(server::rest::messages::get_messages))
         .route("/api/channels/:context_id/messages/:message_id", put(server::rest::messages::edit_message))

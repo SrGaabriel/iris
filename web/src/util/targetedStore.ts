@@ -24,6 +24,15 @@ export class CustomTargetedStore<K extends string | number | symbol, V> {
             callback(key, value);
         });
     }
+
+    unsubscribe(key: K, callback: (value: V) => void) {
+        if (this.store[key]) {
+            const index = this.store[key].indexOf(callback);
+            if (index !== -1) {
+                this.store[key].splice(index, 1);
+            }
+        }
+    }
 }
 
 export default class TargetedStore<T> {

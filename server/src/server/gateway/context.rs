@@ -15,3 +15,16 @@ pub async fn send_packet_to_context(packet_queue: &mut DashMap<i64, Sender<Box<d
         }).await;
     }
 }
+
+pub async fn send_packet_to_user(packet_queue: &mut DashMap<i64, Sender<Box<dyn Packet + Send>>>, user: i64, packet: Box<dyn Packet + Send>) {
+    println!("Sending packet to user: {}", user);
+    if let Some(tx) = packet_queue.get(&user) {
+        println!("Context was found, now sending packet");
+        tx.send(packet).then(|result| {
+            if let Err(e) = result {
+                eprintln!("Failed to send message: {:?}", e);
+            }
+            futures_util::future::ready(())
+        }).await;
+    }
+}

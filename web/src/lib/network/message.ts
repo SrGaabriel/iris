@@ -19,7 +19,7 @@ export const REACTION_REMOVED_ID = 8;
 export function loadProto() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    window.protobuf.load("messages/Packet.proto", function(err, root) {
+    window.protobuf.load("/messages/Packet.proto", function(err, root) {
         if (err) {
             console.log("Error loading proto file Packet");
             throw err;
@@ -44,7 +44,7 @@ export function loadProto() {
 function loadProtoFile(id: number, name: string, clientbound: boolean): any {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    window.protobuf.load(`messages/${name}.proto`, function(err, root) {
+    window.protobuf.load(`/messages/${name}.proto`, function(err, root) {
         if (err) {
             console.log("Error loading proto file " + name);
             throw err;

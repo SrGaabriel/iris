@@ -1,7 +1,6 @@
-import {writable} from "svelte/store";
 import {browser} from "$app/environment";
 import {decodePacket, encodePacket, loadProto, Packet} from "./message.ts";
-import TargetedStore, {CustomTargetedStore} from "../util/targetedStore.ts";
+import {CustomTargetedStore} from "../../util/targetedStore.ts";
 
 export const SECURE = false;
 export const PROTOCOL = SECURE ? "s" : "";
