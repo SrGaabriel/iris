@@ -26,6 +26,7 @@
     export let token;
     export let user;
     export let contact;
+    export let contactTyping;
 
     let typingMessage = '';
 
@@ -38,7 +39,6 @@
     $: replyingTo = null;
     $: reactingTo = null;
     $: addingEmoji = false;
-    $: contactTyping = false;
 
     let userTyping = false;
     let typingTimeout = null;
@@ -217,7 +217,7 @@
 
     function removeReaction(message, reactionId) {
         let reaction = message.reactions.find((reaction) => reaction.reaction_id === reactionId);
-        if (!reaction) return;noto-fonts-emoji
+        if (!reaction) return;
         deleteReaction(token, contact.id, message.id, reactionId).then((response) => {
             if (response.status === 204) {
                 locallyRemoveReaction(message, user.id, reactionId, reaction.count - 1);
@@ -443,7 +443,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 72.5vh;
+        height: 80%;
         overflow-x: hidden;
         overflow-y: scroll;
     }
@@ -464,6 +464,8 @@
         padding: 4px;
         background-color: var(--background);
         margin: 24px;
+        margin-bottom: 84px;
+        margin-top: auto;
     }
     .replying-to {
         position: absolute;

@@ -1,7 +1,6 @@
 <script lang="ts">
     import inefficientData from '$lib/data/emojis.json';
     import {onMount} from "svelte";
-    import VirtualList from '@sveltejs/svelte-virtual-list';
 
     const jsonData = createReducedData();
     let currentCategory = jsonData[0].slug;

@@ -56,7 +56,7 @@ pub async fn add_reaction(
                         .optional()?;
 
                     if let Some(tuple) = reaction {
-                        println!("Already found a reaction, no need for new one");
+                        println!("Already found a reaction, no need for new one: {:?}", tuple);
                         Some(tuple)
                     } else {
                         println!("Inserted");

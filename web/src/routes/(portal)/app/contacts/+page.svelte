@@ -122,11 +122,11 @@
         <div class="contacts">
 <!--            Yes, this is necessary:-->
             {#if true}
-                {@const contacts = searchContacts(contacts, contactSearch)}
-                {#if contacts.length === 0}
+                {@const contactList = searchContacts(contacts, contactSearch)}
+                {#if contactList.length === 0}
                     <p class="no-contacts-found">No contacts found</p>
                 {:else}
-                    {#each contacts as contact}
+                    {#each contactList as contact}
                         <Contact
                                 selfId={data.user.id}
                                 user={contact}
@@ -146,6 +146,7 @@
                         token={data.token}
                         user={data.user}
                         contact={selectedContact}
+                        contactTyping={!!typing[selectedContact.id]}
                     />
                 {/key}
             {/if}
