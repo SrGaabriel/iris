@@ -377,41 +377,43 @@
             {/each}
         </div>
     </div>
-    {#if contactTyping}
+    <div class="footer">
         <div class="typing-container">
-            <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
-            <span class="typing">{contact.name} is currently typing...</span>
+            {#if contactTyping}
+                <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
+                <span class="typing">{contact.name} is currently typing...</span>
+            {/if}
         </div>
-    {/if}
-    <div class="alert-container">
-        <div class="alert-position">
-            <Alert alertStore={alertStore}/>
-        </div>
-    </div>
-    <div class="send-container">
-        {#if replyingTo}
-            <div class="replying-to">
-                <span class="replying-to-text">Replying to:</span>
-                <span class="replying-to-content">{replyingTo.content}</span>
-                <button class="replying-to-close" on:click={() => replyingTo = null}>
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+        <div class="alert-container">
+            <div class="alert-position">
+                <Alert alertStore={alertStore}/>
             </div>
-        {/if}
-        <button class="input-add-emoji" on:click={() => addingEmoji = !addingEmoji} id="add-emoji-button">
-            <i class="fa-regular fa-face-grin-stars"></i>
-        </button>
-        <div class="send-input-container">
-            <textarea
-                    id="send-input"
-                    class="send-input"
-                    rows="1"
-                    on:input={handleTextInput}
-                    bind:value={typingMessage}
-                    placeholder="Type your message..."
-            />
         </div>
-        <button class="send-button" on:click={submit}>Send</button>
+        <div class="send-container">
+            {#if replyingTo}
+                <div class="replying-to">
+                    <span class="replying-to-text">Replying to:</span>
+                    <span class="replying-to-content">{replyingTo.content}</span>
+                    <button class="replying-to-close" on:click={() => replyingTo = null}>
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            {/if}
+            <button class="input-add-emoji" on:click={() => addingEmoji = !addingEmoji} id="add-emoji-button">
+                <i class="fa-regular fa-face-grin-stars"></i>
+            </button>
+            <div class="send-input-container">
+                <textarea
+                        id="send-input"
+                        class="send-input"
+                        rows="1"
+                        on:input={handleTextInput}
+                        bind:value={typingMessage}
+                        placeholder="Type your message..."
+                />
+            </div>
+            <button class="send-button" on:click={submit}>Send</button>
+        </div>
     </div>
 </div>
 
@@ -443,9 +445,9 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 80%;
+        height: 80vh;
         overflow-x: hidden;
-        overflow-y: scroll;
+        overflow-y: auto;
     }
     .messages-container {
         display: flex;
@@ -453,19 +455,21 @@
         width: 95%;
         margin-bottom: 40px;
     }
+    .footer {
+        width: 92.5%;
+        height: 15vh;
+    }
     .send-container {
         position: relative;
         display: flex;
         align-items: center;
-        width: 95%;
-        min-height: 60px;
+        width: 100%;
+        height: 60px;
         border-radius: 8px;
         box-shadow: 0 0 2px 0 var(--reply-color);
         padding: 4px;
         background-color: var(--background);
-        margin: 24px;
-        margin-bottom: 84px;
-        margin-top: auto;
+        margin-bottom: 48px;
     }
     .replying-to {
         position: absolute;
