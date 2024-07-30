@@ -10,7 +10,7 @@
     function getActivePage() {
         if (!browser) return;
         const url = window.location.pathname;
-        if (url.includes('/app/contacts')) {
+        if (url.includes('/app/chat')) {
             return 'contacts';
         } else if (url.includes('/app/chats')) {
             return 'chats';
@@ -35,7 +35,7 @@
                 </button>
                 <button class="sidebar-button" data-active={getActivePage() === 'contacts'}>
                     <i class="fa-regular fa-message"></i>
-                    <span class="button-label">Contacts</span>
+                    <span class="button-label">Chat</span>
                 </button>
                 <button class="sidebar-button" data-active={getActivePage() === 'notes'}>
                     <i class="fa-regular fa-note-sticky"></i>

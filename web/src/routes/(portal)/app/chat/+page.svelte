@@ -43,7 +43,7 @@
                 );
                 if (foundContact) {
                     selectedContact = foundContact;
-                    pushState(`/app/contacts/${data.requestedContactChannelId}`, null);
+                    pushState(`/app/chat/${data.requestedContactChannelId}`, null);
                 }
             }
         });
@@ -57,9 +57,6 @@
         if (previousTimeout) {
             delete typing[message.userId];
             clearTimeout(previousTimeout);
-        }
-        if (selectedContact && message.userId === selectedContact.id) {
-            server.sendPacket(CHANNEL_READ_ID, {contextId: selectedContact.id});
         }
         typing = typing;
     }
@@ -146,7 +143,7 @@
                     <Chat
                         token={data.token}
                         user={data.user}
-                        contact={selectedContact}
+                        channelId={selectedContact.channel_id}
                         contactTyping={!!typing[selectedContact.id]}
                     />
                 {/key}

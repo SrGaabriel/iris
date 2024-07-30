@@ -8,6 +8,7 @@ use crate::server::messages::{Packet, PacketMessage, PacketStaticId};
 pub mod receipts;
 pub mod typing;
 pub mod context;
+pub(crate) mod messages;
 
 #[async_trait]
 pub trait GatewayHandler {

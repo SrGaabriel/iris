@@ -58,11 +58,11 @@
         }
         server.sendPacket(
             CHANNEL_READ_ID,
-            { contextId: user.id }
+            { channel_id: user.id }
         )
         unreadCount = 0;
         selected = user;
-        pushState(`/app/contacts/${user.channel_id}`, null);
+        pushState(`/app/chat/${user.channel_id}`, null);
     }
 </script>
 

@@ -11,7 +11,7 @@ use crate::schema::reactions::reaction_users::reaction_id as reactionUsersTableR
 use crate::schema::reactions::reactions::{emoji, message_id, reaction_count};
 use crate::schema::reactions::reactions::reaction_id;
 use crate::schema::users::User;
-use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, no_content, ok, ReactionAddRequest, ReactionAddResponse};
+use crate::server::rest::{error, IrisResponse, no_content, ok, ReactionAddRequest, ReactionAddResponse};
 use crate::SharedState;
 use http_body_util::BodyExt;
 use diesel::QueryDsl;
@@ -19,7 +19,7 @@ use diesel::ExpressionMethods;
 use futures_util::FutureExt;
 use crate::schema::reactions::reaction_users::user_id;
 use crate::server::gateway::context::send_packet_to_context;
-use crate::server::messages::{ReactionAdded, ReactionRemoved};
+use crate::server::gateway::messages::{ReactionAdded, ReactionRemoved};
 
 pub async fn add_reaction(
     Path((channel_id, message_identifier)): Path<(i64, i64)>,

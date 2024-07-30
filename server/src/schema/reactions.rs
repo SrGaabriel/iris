@@ -63,7 +63,7 @@ pub struct ReactionUserInsert {
     pub user_id: i64
 }
 
-#[derive(Debug, Serialize, Deserialize, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, QueryableByName, Clone, PartialEq)]
 pub struct ReactionSummary {
     #[sql_type = "Text"]
     pub emoji: String,

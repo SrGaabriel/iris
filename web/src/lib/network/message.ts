@@ -55,29 +55,19 @@ function loadProtoFile(id: number, name: string, clientbound: boolean): any {
 }
 
 export function encodePacket(id: number, packet: object) {
-    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[id];
     const message = {
         id: id,
-        data: object.encode(packet).finish()
+        data: encodePacketData(packet)
     };
     return Packet.encode(message).finish();
 }
 
 function encodePacketData(packet: any) {
-    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
-    if (object) {
-        return object.encode(packet).finish();
-    } else {
-        console.log("Unknown packet id: " + packet.id);
-    }
+    // bytes of json
+    return new TextEncoder().encode(JSON.stringify(packet));
 }
 
 export function decodePacket(packet: any) {
-    const object = CLIENTBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
-    if (object) {
-        return object.decode(packet.data);
-    } else {
-        console.log("Unknown packet id: " + packet.id);
-    }
+    return JSON.parse(new TextDecoder().decode(packet.data));
 }
 

@@ -25,8 +25,8 @@
 
     export let token;
     export let user;
-    export let contact;
-    export let contactTyping;
+    export let name;
+    export let channelId;
 
     let typingMessage = '';
 
@@ -72,8 +72,7 @@
     });
 
     function loadMessages() {
-        console.log(contact);
-        fetchMessages(token, contact.channel_id).then((fetchedMessages) => {
+        fetchMessages(token, channelId).then((fetchedMessages) => {
             messages = fetchedMessages.reverse();
         }).then(() => {
             scrollToBottom();
@@ -101,13 +100,12 @@
         }
     }
 
-    function onMessageCreate(message) {
-        if (!message) return;
-        if (message.channelId === contact.channel_id && message.userId === contact.user_id) {
-            const newMessage = {
-                ...message, user_id: message.userId, reply_to: message.replyTo, channel_id: message.channelId
-            }
-            messages = [...messages, newMessage];
+    function onMessageCreate(creation) {
+        if (!creation) return;
+        let message = creation.message;
+        console.log(message);
+        if (message.channel_id === channelId && message.user_id !== user.id) {
+            messages = [...messages, message];
             setTimeout(() => {
                 scrollToBottom();
             }, 50);
@@ -116,13 +114,13 @@
 
     function onMessageEdit(edit) {
         if (!edit) return;
-        if (edit.channelId !== contact.channel_id) return;
+        if (edit.channel_id !== channelId || edit.editor_id === user.id) return;
         messages = messages.map((message) => {
-            if (message.id === edit.messageId) {
+            if (message.id === edit.message_id) {
                 return {
                     ...message,
                     edited: true,
-                    content: edit.newContent
+                    content: edit.new_content
                 };
             }
             return message;
@@ -131,8 +129,9 @@
 
     function onMessageDelete(deletion) {
         if (!deletion) return;
-        if (deletion.channelId !== contact.channel_id) return;
-        messages = messages.filter((m) => m.id !== deletion.messageId);
+        // TODO: filter user out
+        if (deletion.channel_id !== channelId) return;
+        messages = messages.filter((m) => m.id !== deletion.message_id);
     }
 
     function onReactionAdd(reaction) {
@@ -151,14 +150,15 @@
 
     function onBulkMessagesRead(reading) {
         console.log("New reading", reading);
-        if (reading.readerId === contact.id) {
-            messages.forEach((message) => {
-                if (reading.messageIds.includes(message.id)) {
-                    message.receipt = 2;
-                }
-            });
-            messages = messages;
-        }
+        // TODO: fix receipts system
+        // if (reading.readerId === contact.id) {
+        //     messages.forEach((message) => {
+        //         if (reading.messageIds.includes(message.id)) {
+        //             message.receipt = 2;
+        //         }
+        //     });
+        //     messages = messages;
+        // }
     }
 
     function scrollToBottom() {
@@ -169,7 +169,7 @@
         let trimmed = typingMessage.trim();
         if (!typingMessage || trimmed.length === 0) return;
         messagesElement.scrollTo(0, messagesElement.scrollHeight);
-        sendMessage(token, contact.channel_id, trimmed, replyingTo?.id).then((message) => {
+        sendMessage(token, channelId, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             clearState();
             messages = [...messages, message];
@@ -184,7 +184,7 @@
 
     function submitEdit() {
         if (!editingMessage) return;
-        editMessage(token, contact.channel_id,editingMessage.id, editingMessage.content).then((data) => {
+        editMessage(token, channelId, editingMessage.id, editingMessage.content).then((data) => {
             if (data) {
                 messages = messages.map((message) => {
                     if (message.id === editingMessage.id) {
@@ -209,7 +209,7 @@
     }
 
     function reactEmoji(message, emoji) {
-        addReaction(token, contact.channel_id, message.id, emoji).then((data) => {
+        addReaction(token, channelId, message.id, emoji).then((data) => {
             if (data) {
                 locallyAddReaction(message, user.id, data.reaction_id, data.reaction_count, emoji);
             }
@@ -221,7 +221,7 @@
     function removeReaction(message, reactionId) {
         let reaction = message.reactions.find((reaction) => reaction.reaction_id === reactionId);
         if (!reaction) return;
-        deleteReaction(token, contact.id, message.id, reactionId).then((response) => {
+        deleteReaction(token, channelId, message.id, reactionId).then((response) => {
             if (response.status === 204) {
                 locallyRemoveReaction(message, user.id, reactionId, reaction.count - 1);
             }
@@ -310,7 +310,7 @@
     function continuousTyping() {
         userTyping = true;
         server.sendPacket(TYPING_REQUEST_ID, {
-            contextId: contact.id
+            channelId: channelId
         });
         typingTimeout = setTimeout(() => {
             if (typingContent === typingMessage) {
@@ -331,7 +331,7 @@
     }
 
     function deleteMessage(messageId) {
-        excludeMessage(token, contact.channel_id, messageId).then((response) => {
+        excludeMessage(token, channelId, messageId).then((response) => {
             if (response.status === 204) {
                 messages = messages.filter((message) => message.id !== messageId);
             }
@@ -359,10 +359,7 @@
                 <div in:receive={{key: message.id}} out:send={{key: message.id}}>
                     <Message
                             user={user}
-                            contact={contact}
                             message={message}
-                            sent={message.user_id === user.id}
-                            sender={getUserObject(message.user_id)}
                             followingMessage={messages[i + 1]}
                             reactEmoji={reactEmoji}
                             removeReaction={removeReaction}
@@ -382,10 +379,10 @@
     </div>
     <div class="footer">
         <div class="typing-container">
-            {#if contactTyping}
-                <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
-                <span class="typing">{contact.name} is currently typing...</span>
-            {/if}
+            <!--{#if contactTyping}-->
+            <!--    <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>-->
+            <!--    <span class="typing">{contact.name} is currently typing...</span>-->
+            <!--{/if}-->
         </div>
         <div class="alert-container">
             <div class="alert-position">

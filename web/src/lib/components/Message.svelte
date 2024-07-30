@@ -3,9 +3,6 @@
     import {countEmojis, isMessageMadeOfOnlyEmojis} from "$lib/util/emojis.ts";
 
     export let user;
-    export let contact;
-    export let sender;
-    export let sent;
     export let openContextMenu;
     export let message;
     export let messageRepliesTo;
@@ -19,6 +16,9 @@
     export let submitEdit;
     export let excludeMessage;
     export let alertStore;
+
+    let sender = message.author;
+    let sent = message.user_id === user.id;
 
     function handleMessageContextMenu(event) {
         event.preventDefault();
@@ -146,7 +146,7 @@
                       }
                   }}>
                       <div class="message-reply-header">
-                          <span class="message-reply-sender-name">{messageRepliesTo ? (messageRepliesTo.user_id === user.id ? user.name : contact.name) : 'Unknown'}</span>
+                          <span class="message-reply-sender-name">{messageRepliesTo ? (messageRepliesTo.user_id === user.id ? user.name : 'Unknown') : 'Unknown'}</span>
                           {#if messageRepliesTo}
                               •
                               <span class="message-reply-header-text">{getTimestampFormatted(getTimestamp(messageRepliesTo.id))}</span>

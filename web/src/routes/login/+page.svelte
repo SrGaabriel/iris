@@ -19,7 +19,7 @@
         if (response.ok) {
             const data = await response.json();
             document.cookie = `token=${data.token}`;
-            window.location.href = '/app/contacts';
+            window.location.href = '/app/chat';
         } else {
             result.innerText = 'Login failed';
         }

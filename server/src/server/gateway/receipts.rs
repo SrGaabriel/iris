@@ -1,14 +1,14 @@
 use async_trait::async_trait;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use tokio::sync::RwLockWriteGuard;
 
 use crate::AppState;
-use crate::schema::messages::messages::{channel_id as messageChannelId, channel_id, message_id as messageId, reception_status, user_id};
+use crate::schema::messages::messages::{channel_id, message_id as messageId, reception_status};
 use crate::schema::messages::messages::dsl::messages as messagesTable;
 use crate::schema::users::User;
 use crate::server::gateway::GatewayHandler;
-use crate::server::messages::{ChannelRead, MessagesRead, PacketMessage};
-use crate::server::messages::Packet;
+use crate::server::gateway::messages::{ChannelRead};
+use crate::server::messages::{Packet, PacketMessage};
 use crate::server::messages::PacketStaticId;
 
 pub struct ReceiptGatewayHandler;

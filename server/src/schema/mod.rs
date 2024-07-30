@@ -6,6 +6,7 @@ pub mod users;
 pub mod messages;
 pub mod reactions;
 pub mod channels;
+pub mod ctes;
 
 use crate::schema::users::users as users_table;
 use crate::schema::channels::channels as channels_table;

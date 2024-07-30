@@ -1,5 +1,5 @@
 use diesel::pg::Pg;
-use diesel::sql_types::{Nullable, Text, BigInt, SmallInt};
+use diesel::sql_types::{Nullable, Text, BigInt, SmallInt, VarChar};
 use diesel::{allow_tables_to_appear_in_same_query, Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use crate::schema::users::users;
 use crate::User;
@@ -73,6 +73,10 @@ pub struct CompleteMessage {
     pub edited: bool,
     #[sql_type = "Nullable<BigInt>"]
     pub reply_to: Option<i64>,
+    #[sql_type = "VarChar"]
+    pub author_name: String,
+    #[sql_type = "VarChar"]
+    pub author_username: String,
     #[sql_type = "Text"]
     pub reactions: String
 }

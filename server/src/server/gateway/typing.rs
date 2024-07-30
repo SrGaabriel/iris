@@ -4,8 +4,8 @@ use tokio::sync::RwLockWriteGuard;
 use crate::AppState;
 use crate::schema::users::User;
 use crate::server::gateway::GatewayHandler;
-use crate::server::messages::{ContactTyping, PacketMessage, PacketStaticId, TypingRequest};
-use crate::server::messages::Packet;
+use crate::server::gateway::messages::{ContactTyping, TypingRequest};
+use crate::server::messages::{Packet, PacketMessage, PacketStaticId};
 
 pub struct TypingGatewayHandler;
 
