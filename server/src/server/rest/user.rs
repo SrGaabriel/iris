@@ -1,7 +1,7 @@
 use axum::body::Body;
 use axum::http::Request;
 
-use crate::entity::user::User;
+use crate::schema::users::User;
 use crate::server::rest;
 use crate::server::rest::{IrisResponse, UserSelfResponse};
 

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tokio::sync::RwLockWriteGuard;
 
 use crate::AppState;
-use crate::entity::user::User;
+use crate::schema::users::User;
 use crate::server::gateway::GatewayHandler;
 use crate::server::messages::{ContactTyping, PacketMessage, PacketStaticId, TypingRequest};
 use crate::server::messages::Packet;
@@ -22,7 +22,7 @@ impl GatewayHandler for TypingGatewayHandler {
         if let Some(tx) = target_tx {
             println!("Sending contact typing...");
             tx.send(Box::new(ContactTyping {
-                contact_id: user.id,
+                contact_id: user.user_id,
             })).await.expect("Failed to send contact typing packet");
         }
     }

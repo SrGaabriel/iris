@@ -10,19 +10,19 @@ use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
 
-use crate::entity::message::{CompleteMessage, Message};
-use crate::entity::message::messages::{content, context, edited, id as messageId, user_id};
-use crate::entity::message::messages::dsl::messages as messagesTable;
-use crate::entity::message::messages::dsl::messages;
-use crate::entity::user::User;
-use crate::server::gateway::context::send_packet_to_context;
+use crate::schema::messages::{CompleteMessage, Message};
+use crate::schema::messages::messages::{content, channel_id as messageChannelId, edited, message_id as messageId, user_id};
+use crate::schema::messages::messages::dsl::messages as messagesTable;
+use crate::schema::messages::messages::dsl::messages;
+use crate::schema::users::User;
+use crate::server::gateway::context::{send_packet_to_channel, send_packet_to_context};
 use crate::server::messages::{MessageCreated, MessageDeleted, MessageEdited};
 use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, IterablePrivateMessage, no_content, ok, PrivateMessage};
 use crate::SharedState;
 
 #[debug_handler]
 pub async fn create_message(
-    Path(contact_id): Path<i64>,
+    Path(channel_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<CompletePrivateMessage> {
@@ -55,11 +55,10 @@ pub async fn create_message(
 
     let id: i64 = { state.snowflake_issuer.generate().value() as i64 };
     let new_message = Message {
-        id,
-        user_id: user.id,
+        message_id: id,
+        user_id: user.user_id,
         content: message.content.clone(),
-        context: contact_id,
-        context_type: 0,
+        channel_id,
         reception_status: 0,
         edited: false,
         reply_to: message.reply_to
@@ -71,21 +70,20 @@ pub async fn create_message(
         .expect("Failed to insert message");
 
     let message = MessageCreated {
-        id: inserted_message.id,
+        id: inserted_message.message_id,
         content: inserted_message.content.clone(),
         user_id: inserted_message.user_id,
-        context: inserted_message.context,
+        channel_id: inserted_message.channel_id,
         reply_to: inserted_message.reply_to
     };
-    send_packet_to_context(&mut state.packet_queue, user.id, Box::new(message.clone())).await;
-    send_packet_to_context(&mut state.packet_queue, contact_id, Box::new(message)).await;
+    send_packet_to_channel(state, channel_id, || Box::new(message.clone())).await;
 
     ok(CompletePrivateMessage::with_reply(&inserted_message, reply_message))
 }
 
 // This method will get the messages between the user and the specified contact
 pub async fn get_messages(
-    Path(contact_id): Path<i64>,
+    Path(channel_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
 ) -> IrisResponse<Vec<IterablePrivateMessage>> {
@@ -107,10 +105,10 @@ WITH reactions_with_me AS (
         reactions.reaction_id, reactions.message_id, reactions.emoji, reactions.reaction_count
 )
 SELECT
-    messages.id,
+    messages.message_id,
     messages.user_id,
     messages.content,
-    messages.context,
+    messages.channel_id,
     messages.reception_status,
     messages.edited,
     messages.reply_to,
@@ -127,29 +125,25 @@ SELECT
     ) AS reactions
 FROM
     messages
-LEFT JOIN reactions_with_me ON reactions_with_me.message_id = messages.id
+LEFT JOIN reactions_with_me ON reactions_with_me.message_id = messages.message_id
 WHERE
-    messages.context_type = 0
-    AND (
-        (messages.user_id = $1 AND messages.context = $2)
-        OR (messages.user_id = $2 AND messages.context = $1)
-    )
+    messages.channel_id = $2
 GROUP BY
-    messages.id
+    messages.message_id
 ORDER BY
-    messages.id DESC;
+    messages.message_id DESC;
     "#;
     let query = diesel::sql_query(query)
-        .bind::<BigInt, _>(user.id)
-        .bind::<BigInt, _>(contact_id);
+        .bind::<BigInt, _>(user.user_id)
+        .bind::<BigInt, _>(channel_id);
     let bilateral_messages = query.load::<CompleteMessage>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| {
         IterablePrivateMessage {
-            id: m.id,
+            id: m.message_id,
             user_id: m.user_id,
             content: m.content.clone(),
-            context: m.context,
+            context: m.channel_id,
             receipt: m.reception_status,
             edited: m.edited,
             reply_to: m.reply_to,
@@ -171,9 +165,9 @@ pub async fn edit_message(
     let message: Json<MessageCreationRequest> = message.unwrap();
 
     let query = messages
-        .filter(context.eq(channel_id))
+        .filter(messageChannelId.eq(channel_id))
         .filter(messageId.eq(message_id))
-        .filter(user_id.eq(user.id));
+        .filter(user_id.eq(user.user_id));
 
     // now we set both the content and the edited flag to true
     let new_content = message.0.content;
@@ -189,10 +183,10 @@ pub async fn edit_message(
     let message = message.unwrap();
 
     send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageEdited {
-        message_id: message.id,
+        message_id: message.message_id,
         new_content,
-        editor_id: user.id,
-        context_id: message.context
+        editor_id: user.user_id,
+        context_id: message.channel_id
     })).await;
 
     ok(PrivateMessage::from(&message))
@@ -207,9 +201,9 @@ pub async fn delete_message(
 
     let state = &mut state.write().await;
     let query = messages
-        .filter(context.eq(channel_id))
+        .filter(messageChannelId.eq(channel_id))
         .filter(messageId.eq(message_id))
-        .filter(user_id.eq(user.id));
+        .filter(user_id.eq(user.user_id));
     let deleted = diesel::delete(query).returning(messagesTable::all_columns()).get_result::<Message>(&mut state.database);
 
     if deleted.is_err() {
@@ -218,7 +212,7 @@ pub async fn delete_message(
     let message = deleted.unwrap();
 
     send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageDeleted {
-        message_id: message.id,
+        message_id: message.message_id,
         context_id: channel_id
     })).await;
 

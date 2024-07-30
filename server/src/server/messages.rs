@@ -55,7 +55,7 @@ pub struct MessageCreated {
     #[prost(int64, tag = "3")]
     pub user_id: i64,
     #[prost(int64, tag = "4")]
-    pub context: i64,
+    pub channel_id: i64,
     #[prost(int64, tag = "5", optional)]
     pub reply_to: Option<i64>
 }

@@ -72,7 +72,8 @@
     });
 
     function loadMessages() {
-        fetchMessages(token, contact.id).then((fetchedMessages) => {
+        console.log(contact);
+        fetchMessages(token, contact.channel_id).then((fetchedMessages) => {
             messages = fetchedMessages.reverse();
         }).then(() => {
             scrollToBottom();
@@ -102,9 +103,9 @@
 
     function onMessageCreate(message) {
         if (!message) return;
-        if (message.userId === contact.id) {
+        if (message.channelId === contact.channel_id && message.userId === contact.user_id) {
             const newMessage = {
-                ...message, user_id: message.userId, reply_to: message.replyTo
+                ...message, user_id: message.userId, reply_to: message.replyTo, channel_id: message.channelId
             }
             messages = [...messages, newMessage];
             setTimeout(() => {
@@ -166,7 +167,7 @@
         if (!typingMessage || trimmed.length === 0) return;
         messagesElement.scrollTo(0, messagesElement.scrollHeight);
         console.log(contact.id);
-        sendMessage(token, contact.id, trimmed, replyingTo?.id).then((message) => {
+        sendMessage(token, contact.channel_id, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             clearState();
             messages = [...messages, message];
@@ -445,7 +446,8 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 80vh;
+        height: 75vh;
+        padding-top: 32px;
         overflow-x: hidden;
         overflow-y: auto;
     }

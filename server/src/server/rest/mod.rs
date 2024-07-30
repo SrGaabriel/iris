@@ -2,8 +2,8 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum_extra::either::Either;
 use serde::{Deserialize, Serialize};
-use crate::entity::reactions::ReactionSummary;
-pub use crate::entity::user::User;
+use crate::schema::reactions::ReactionSummary;
+pub use crate::schema::users::User;
 
 pub mod auth;
 pub mod contacts;
@@ -36,6 +36,12 @@ pub fn error<T: Serialize>(status: StatusCode, message: &str) -> IrisResponse<T>
 }
 
 #[derive(Serialize)]
+pub struct UserAuthResponse {
+    pub user: UserSelfResponse,
+    pub token: String
+}
+
+#[derive(Serialize)]
 pub struct UserSelfResponse {
     pub id: i64,
     pub name: String,
@@ -46,7 +52,7 @@ pub struct UserSelfResponse {
 impl From<User> for UserSelfResponse {
     fn from(user: User) -> Self {
         UserSelfResponse {
-            id: user.id,
+            id: user.user_id,
             name: user.name,
             username: user.username,
             email: user.email
@@ -63,7 +69,8 @@ pub struct PrimordialMessage {
 
 #[derive(Serialize)]
 pub struct ContactResponse {
-    pub id: i64,
+    pub user_id: i64,
+    pub channel_id: i64,
     pub name: String,
     pub username: String,
     pub last_message: Option<PrimordialMessage>,
@@ -93,12 +100,12 @@ pub struct CompletePrivateMessage {
 }
 
 impl CompletePrivateMessage {
-    pub fn with_reply(message: &crate::entity::message::Message, reply_message: Option<PrivateMessage>) -> Self {
+    pub fn with_reply(message: &crate::schema::messages::Message, reply_message: Option<PrivateMessage>) -> Self {
         CompletePrivateMessage {
-            id: message.id,
+            id: message.message_id,
             content: String::from(&message.content),
             user_id: message.user_id,
-            context: message.context,
+            context: message.channel_id,
             receipt: message.reception_status,
             edited: message.edited,
             reply_to: reply_message
@@ -106,13 +113,13 @@ impl CompletePrivateMessage {
     }
 }
 
-impl From<&crate::entity::message::Message> for PrivateMessage {
-    fn from(message: &crate::entity::message::Message) -> Self {
+impl From<&crate::schema::messages::Message> for PrivateMessage {
+    fn from(message: &crate::schema::messages::Message) -> Self {
         PrivateMessage {
-            id: message.id,
+            id: message.message_id,
             content: String::from(&message.content),
             user_id: message.user_id,
-            context: message.context,
+            context: message.channel_id,
             receipt: message.reception_status,
             edited: message.edited,
             reply_to: message.reply_to

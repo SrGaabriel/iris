@@ -4,20 +4,20 @@ use axum::extract::Path;
 use axum::http::{Request, StatusCode};
 use diesel::{Connection, OptionalExtension, RunQueryDsl};
 
-use crate::entity::reactions::{Reaction, ReactionInsert, ReactionUser, ReactionUserInsert};
-use crate::entity::reactions::reactions::dsl::reactions as reactionsTable;
-use crate::entity::reactions::reaction_users::dsl::reaction_users as reactionUsersTable;
-use crate::entity::reactions::reaction_users::reaction_id as reactionUsersTableReactionId;
-use crate::entity::reactions::reactions::{emoji, message_id, reaction_count};
-use crate::entity::reactions::reactions::reaction_id;
-use crate::entity::user::User;
+use crate::schema::reactions::{Reaction, ReactionInsert, ReactionUser, ReactionUserInsert};
+use crate::schema::reactions::reactions::dsl::reactions as reactionsTable;
+use crate::schema::reactions::reaction_users::dsl::reaction_users as reactionUsersTable;
+use crate::schema::reactions::reaction_users::reaction_id as reactionUsersTableReactionId;
+use crate::schema::reactions::reactions::{emoji, message_id, reaction_count};
+use crate::schema::reactions::reactions::reaction_id;
+use crate::schema::users::User;
 use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, no_content, ok, ReactionAddRequest, ReactionAddResponse};
 use crate::SharedState;
 use http_body_util::BodyExt;
 use diesel::QueryDsl;
 use diesel::ExpressionMethods;
 use futures_util::FutureExt;
-use crate::entity::reactions::reaction_users::user_id;
+use crate::schema::reactions::reaction_users::user_id;
 use crate::server::gateway::context::send_packet_to_context;
 use crate::server::messages::{ReactionAdded, ReactionRemoved};
 
@@ -80,7 +80,7 @@ pub async fn add_reaction(
             let (message_reaction_id, count) = reaction_details.unwrap();
             let reaction_user = ReactionUserInsert {
                 reaction_id: message_reaction_id,
-                user_id: user.id,
+                user_id: user.user_id,
             };
 
             let user_query = diesel::insert_into(reactionUsersTable)
@@ -97,7 +97,7 @@ pub async fn add_reaction(
 
     send_packet_to_context(&mut state.packet_queue, channel_id.clone(), Box::new(ReactionAdded {
         message_id: message_identifier,
-        user_id: user.id,
+        user_id: user.user_id,
         emoji: emoticon,
         reaction_count: count,
         reaction_id: message_reaction_id,
@@ -129,7 +129,7 @@ pub async fn remove_reaction(
 
             diesel::delete(reactionUsersTable)
                 .filter(reactionUsersTableReactionId.eq(reaction_identifier))
-                .filter(user_id.eq(user.id))
+                .filter(user_id.eq(user.user_id))
                 .execute(connection)?;
             Ok((count))
         })
@@ -141,7 +141,7 @@ pub async fn remove_reaction(
 
     send_packet_to_context(&mut state.packet_queue, channel_id.clone(), Box::new(ReactionRemoved {
         message_id: message_identifier,
-        user_id: user.id,
+        user_id: user.user_id,
         emoji: String::from(""),
         reaction_count: transaction_result.unwrap(),
         reaction_id: reaction_identifier,

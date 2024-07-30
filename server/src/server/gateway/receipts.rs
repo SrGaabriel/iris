@@ -1,13 +1,13 @@
 use async_trait::async_trait;
-use crate::entity::user::User;
+use crate::schema::users::User;
 use crate::server::gateway::GatewayHandler;
 use crate::server::messages::{ContextRead, MessagesRead, PacketMessage};
 use crate::{AppState, SharedState};
 use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl, ExpressionMethods};
 use futures_util::FutureExt;
 use tokio::sync::RwLockWriteGuard;
-use crate::entity::message::messages::{id as messageId, context, reception_status, user_id};
-use crate::entity::message::messages::dsl::messages as messagesTable;
+use crate::schema::messages::messages::{message_id as messageId, channel_id as messageChannelId, reception_status, user_id};
+use crate::schema::messages::messages::dsl::messages as messagesTable;
 use crate::server::messages::Packet;
 use crate::server::messages::PacketStaticId;
 
@@ -22,7 +22,7 @@ impl GatewayHandler for ReceiptGatewayHandler {
     async fn handle(&self, user: &User, state: &mut RwLockWriteGuard<AppState>, message: &PacketMessage) {
         let request = ContextRead::decode_data(&message.data).expect("Failed to decode context read packet");
         let query = diesel::update(messagesTable)
-            .filter(context.eq(user.id).and(reception_status.ne(2)).and(user_id.eq(request.context_id)))
+            .filter(messageChannelId.eq(user.user_id).and(reception_status.ne(2)).and(user_id.eq(request.context_id)))
             .set(reception_status.eq(2))
             .returning(messageId);
         let returns = { query.load::<i64>(&mut state.database).expect("Failed to update reception status") };
@@ -31,7 +31,7 @@ impl GatewayHandler for ReceiptGatewayHandler {
         if let Some(tx) = target_tx {
             println!("Sending messages read...");
             tx.send(Box::new(MessagesRead {
-                reader_id: user.id,
+                reader_id: user.user_id,
                 message_ids: returns
             })).await.expect("Failed to send messages read packet");
         }

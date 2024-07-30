@@ -5,6 +5,6 @@ message MessageCreated {
   int64 id = 1;
   string content = 2;
   int64 user_id = 3;
-  int64 context = 4;
+  int64 channel_id = 4;
   optional int64 reply_to = 5;
 }
