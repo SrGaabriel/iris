@@ -1,7 +1,8 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {CONTEXT_READ_ID} from "$lib/network/message.ts";
+    import {CHANNEL_READ_ID} from "$lib/network/message.ts";
     import server from "$lib/network/server.ts";
+    import {pushState} from "$app/navigation";
 
     export let selfId: number;
     export let picture: string;
@@ -56,12 +57,12 @@
             return;
         }
         server.sendPacket(
-            CONTEXT_READ_ID,
+            CHANNEL_READ_ID,
             { contextId: user.id }
         )
         unreadCount = 0;
         selected = user;
-        history.pushState(null, '', `/app/contacts/${user.id}`);
+        pushState(`/app/contacts/${user.channel_id}`, null);
     }
 </script>
 

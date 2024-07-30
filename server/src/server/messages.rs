@@ -31,9 +31,9 @@ pub struct PacketMessage {
 
 #[derive(Clone, PartialEq, Message)]
 #[packet(id = 1)]
-pub struct ContextRead {
+pub struct ChannelRead {
     #[prost(int64, tag = "1")]
-    pub context_id: i64
+    pub channel_id: i64
 }
 
 #[derive(Clone, PartialEq, Message)]
@@ -82,7 +82,7 @@ pub struct MessageEdited {
     #[prost(int64, tag = "1")]
     pub message_id: i64,
     #[prost(int64, tag = "2")]
-    pub context_id: i64,
+    pub channel_id: i64,
     #[prost(int64, tag = "3")]
     pub editor_id: i64,
     #[prost(string, tag = "4")]
@@ -95,7 +95,7 @@ pub struct MessageDeleted {
     #[prost(int64, tag = "1")]
     pub message_id: i64,
     #[prost(int64, tag = "2")]
-    pub context_id: i64
+    pub channel_id: i64
 }
 
 #[derive(Clone, PartialEq, Message)]

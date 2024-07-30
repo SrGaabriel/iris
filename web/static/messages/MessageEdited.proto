@@ -3,7 +3,7 @@ package messages;
 
 message MessageEdited {
     int64 message_id = 1;
-    int64 context_id = 2;
+    int64 channel_id = 2;
     int64 editor_id = 3;
     string new_content = 4;
 }

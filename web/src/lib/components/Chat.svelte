@@ -12,7 +12,7 @@
     } from "$lib/network/api.ts";
     import server from "$lib/network/server.ts";
     import {
-        CONTEXT_READ_ID,
+        CHANNEL_READ_ID,
         MESSAGE_CREATED_ID,
         MESSAGE_DELETED_ID,
         MESSAGE_EDITED_ID, MESSAGES_READ_ID,
@@ -116,11 +116,13 @@
 
     function onMessageEdit(edit) {
         if (!edit) return;
+        if (edit.channelId !== contact.channel_id) return;
         messages = messages.map((message) => {
             if (message.id === edit.messageId) {
                 return {
                     ...message,
-                    content: edit.content
+                    edited: true,
+                    content: edit.newContent
                 };
             }
             return message;
@@ -129,6 +131,7 @@
 
     function onMessageDelete(deletion) {
         if (!deletion) return;
+        if (deletion.channelId !== contact.channel_id) return;
         messages = messages.filter((m) => m.id !== deletion.messageId);
     }
 
@@ -166,7 +169,6 @@
         let trimmed = typingMessage.trim();
         if (!typingMessage || trimmed.length === 0) return;
         messagesElement.scrollTo(0, messagesElement.scrollHeight);
-        console.log(contact.id);
         sendMessage(token, contact.channel_id, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             clearState();
@@ -182,7 +184,7 @@
 
     function submitEdit() {
         if (!editingMessage) return;
-        editMessage(token, contact.id,editingMessage.id, editingMessage.content).then((data) => {
+        editMessage(token, contact.channel_id,editingMessage.id, editingMessage.content).then((data) => {
             if (data) {
                 messages = messages.map((message) => {
                     if (message.id === editingMessage.id) {
@@ -207,7 +209,7 @@
     }
 
     function reactEmoji(message, emoji) {
-        addReaction(token, contact.id, message.id, emoji).then((data) => {
+        addReaction(token, contact.channel_id, message.id, emoji).then((data) => {
             if (data) {
                 locallyAddReaction(message, user.id, data.reaction_id, data.reaction_count, emoji);
             }
@@ -329,7 +331,7 @@
     }
 
     function deleteMessage(messageId) {
-        excludeMessage(token, contact.id, messageId).then((response) => {
+        excludeMessage(token, contact.channel_id, messageId).then((response) => {
             if (response.status === 204) {
                 messages = messages.filter((message) => message.id !== messageId);
             }

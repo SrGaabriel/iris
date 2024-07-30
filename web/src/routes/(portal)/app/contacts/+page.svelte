@@ -6,13 +6,14 @@
     import TargetedStore from '../../../../util/targetedStore.ts';
     import {
         CONTACT_TYPING_ID,
-        CONTEXT_READ_ID,
+        CHANNEL_READ_ID,
         MESSAGE_CREATED_ID
     } from "$lib/network/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
     import {fetchContacts} from "$lib/network/api.ts"
     import Chat from "$lib/components/Chat.svelte";
     import PortalLayout from "../PortalLayout.svelte";
+    import {pushState} from "$app/navigation";
 
     export let data;
     let contacts = [];
@@ -36,13 +37,13 @@
             contacts = contact_list;
             return contact_list;
         }).then((contact_list) => {
-            if (data.requestedContactId) {
+            if (data.requestedContactChannelId) {
                 let foundContact = contact_list.find(contact =>
-                    contact.id === parseInt(data.requestedContactId)
+                    contact.channel_id === parseInt(data.requestedContactChannelId)
                 );
                 if (foundContact) {
                     selectedContact = foundContact;
-                    history.pushState({}, '', `/app/contacts/${data.requestedContactId}`);
+                    pushState(`/app/contacts/${data.requestedContactChannelId}`, null);
                 }
             }
         });
@@ -58,7 +59,7 @@
             clearTimeout(previousTimeout);
         }
         if (selectedContact && message.userId === selectedContact.id) {
-            server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
+            server.sendPacket(CHANNEL_READ_ID, {contextId: selectedContact.id});
         }
         typing = typing;
     }

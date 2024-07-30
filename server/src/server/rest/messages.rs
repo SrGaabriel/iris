@@ -3,13 +3,14 @@ use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
 use diesel::{debug_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Table};
+use diesel::dsl::exists;
 use diesel::pg::Pg;
 use diesel::sql_types::BigInt;
 use diesel::prelude::*;
 use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
-
+use crate::schema::channels::channel_members::dsl::channel_members;
 use crate::schema::messages::{CompleteMessage, Message};
 use crate::schema::messages::messages::{content, channel_id as messageChannelId, edited, message_id as messageId, user_id};
 use crate::schema::messages::messages::dsl::messages as messagesTable;
@@ -90,6 +91,21 @@ pub async fn get_messages(
     let user = request.extensions().get::<User>().cloned().expect("User not found");
 
     let connection = &mut state.write().await.database;
+
+    {
+        let is_member = diesel::select(
+            exists(
+                channel_members
+                    .filter(crate::schema::channels::channel_members::user_id.eq(user.user_id))
+                    .filter(crate::schema::channels::channel_members::channel_id.eq(channel_id))
+            )
+        ).get_result::<bool>(connection).expect("Error checking if user is a member");
+
+        if !is_member {
+            return error(StatusCode::FORBIDDEN, "You are not a member of this channel");
+        }
+    }
+
     let query = r#"
 WITH reactions_with_me AS (
     SELECT
@@ -171,7 +187,7 @@ pub async fn edit_message(
 
     // now we set both the content and the edited flag to true
     let new_content = message.0.content;
-    let state = &mut state.write().await;
+    let mut state = state.write().await;
     let message = diesel::update(query)
         .set((content.eq(new_content.clone()), edited.eq(true)))
         .returning(messagesTable::all_columns())
@@ -182,11 +198,11 @@ pub async fn edit_message(
     }
     let message = message.unwrap();
 
-    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageEdited {
-        message_id: message.message_id,
-        new_content,
+    send_packet_to_channel(state, channel_id, || Box::new(MessageEdited {
+        new_content: new_content.clone(),
         editor_id: user.user_id,
-        context_id: message.channel_id
+        message_id: message.message_id,
+        channel_id: message.channel_id,
     })).await;
 
     ok(PrivateMessage::from(&message))
@@ -199,7 +215,7 @@ pub async fn delete_message(
 ) -> IrisResponse<()> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
 
-    let state = &mut state.write().await;
+    let mut state = state.write().await;
     let query = messages
         .filter(messageChannelId.eq(channel_id))
         .filter(messageId.eq(message_id))
@@ -211,9 +227,9 @@ pub async fn delete_message(
     }
     let message = deleted.unwrap();
 
-    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageDeleted {
+    send_packet_to_channel(state, channel_id, || Box::new(MessageDeleted {
         message_id: message.message_id,
-        context_id: channel_id
+        channel_id: message.channel_id
     })).await;
 
     no_content()

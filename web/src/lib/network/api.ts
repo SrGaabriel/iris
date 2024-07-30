@@ -50,8 +50,8 @@ export async function sendMessage(token: string, contactId, content: string, rep
 }
 
 // Submit edit
-export async function editMessage(token: string, contactId, messageId, content: string) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages/${messageId}`, {
+export async function editMessage(token: string, channelId, messageId, content: string) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages/${messageId}`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -65,8 +65,8 @@ export async function editMessage(token: string, contactId, messageId, content: 
     return JSON.parse(text);
 }
 
-export async function excludeMessage(token: string, contactId, messageId) {
-    return await fetch(`${API}/api/channels/${contactId}/messages/${messageId}`, {
+export async function excludeMessage(token: string, channelId, messageId) {
+    return await fetch(`${API}/api/channels/${channelId}/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -74,8 +74,8 @@ export async function excludeMessage(token: string, contactId, messageId) {
     });
 }
 
-export async function addReaction(token: string, contactId, messageId, emoji) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages/${messageId}/reactions`, {
+export async function addReaction(token: string, channelId, messageId, emoji) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages/${messageId}/reactions`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`

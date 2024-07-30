@@ -1,0 +1,6 @@
+syntax="proto3";
+package messages;
+
+message ChannelRead {
+  int64 channel_id = 1;
+}

@@ -3,7 +3,7 @@ export const CLIENTBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 export const SERVERBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 
 // SERVERBOUND
-export const CONTEXT_READ_ID = 1;
+export const CHANNEL_READ_ID = 1;
 export const TYPING_REQUEST_ID = 2;
 
 // CLIENTBOUND
@@ -28,7 +28,7 @@ export function loadProto() {
         Packet = root.lookupType("Packet");
     });
     // SERVERBOUND
-    loadProtoFile(CONTEXT_READ_ID, "ContextRead", false);
+    loadProtoFile(CHANNEL_READ_ID, "ChannelRead", false);
     loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
 
     // CLIENTBOUND

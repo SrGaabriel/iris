@@ -43,7 +43,7 @@ unread_reception_count AS (
     FROM
         messages m
     WHERE
-        m.reception_status = 0
+        m.reception_status = 0 AND m.user_id != $1
     GROUP BY
         m.channel_id
 )
@@ -92,7 +92,7 @@ WHERE
                 }),
                 None => None
             },
-            unread_count: contact.unread_reception_count
+            unread_count: 0 // TODO: use the actual value
         }
     }).collect();
 
