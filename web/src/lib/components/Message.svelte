@@ -179,7 +179,7 @@
           {/if}
     </div>
     {#if message?.reactions?.length > 0}
-        <div class="reactions">
+        <div class={`reactions ${sent ? 'sent' : 'received'}`}>
             {#each message.reactions as reaction}
                 <button class={`reaction ${reaction.me ? 'reacted' : ''}`} on:click={() => {
                         clearState();
@@ -478,6 +478,11 @@
         display: flex;
         gap: 8px;
         margin-top: 4px;
+        max-width: min(40%, 550px);
+        flex-wrap: wrap;
+    }
+    .reactions.sent {
+        justify-content: right;
     }
     .reaction {
         border-radius: 6px;
@@ -489,7 +494,7 @@
         font-weight: 600;
         color: var(--reaction-counter);
         font-family: 'Roboto', sans-serif;
-        font-size: 15px;
+        font-size: 14px;
         background-color: var(--heavy-constrast);
         border: 2px solid transparent;
         cursor: pointer;

@@ -5,8 +5,6 @@ use crate::schema::users::users;
 use crate::User;
 use diesel::sql_types::Bool;
 
-pub type ContextType = i16;
-
 #[derive(Queryable, Identifiable, Associations, Selectable, Insertable)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = messages)]

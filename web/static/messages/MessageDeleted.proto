@@ -1,7 +1,0 @@
-syntax="proto3";
-package messages;
-
-message MessageDeleted {
-    int64 message_id = 1;
-    int64 channel_id = 2;
-}

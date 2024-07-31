@@ -24,7 +24,7 @@ pub async fn send_packet_to_context(packet_queue: &mut DashMap<i64, Sender<Box<d
 }
 
 pub async fn send_packet_to_channel<F>(
-    mut lock: RwLockWriteGuard<'_, AppState>,
+    lock: &mut RwLockWriteGuard<'_, AppState>,
     channel_id: i64,
     packet_fn: F
 ) where F: Fn() -> Box<dyn Packet + Send> {

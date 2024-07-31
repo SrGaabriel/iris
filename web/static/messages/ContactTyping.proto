@@ -1,6 +1,0 @@
-syntax="proto3";
-package messages;
-
-message ContactTyping {
-    int64 contact_id = 1;
-}

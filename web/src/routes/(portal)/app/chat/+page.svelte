@@ -49,28 +49,46 @@
         });
     }
 
-    function onMessageCreated(message) {
+    function onMessageCreated(create) {
+        const message = create.message;
         messageStore.set(message);
-        if (message.userId === data.user.id)
-            return;
-        const previousTimeout = typing[message.userId];
-        if (previousTimeout) {
-            delete typing[message.userId];
-            clearTimeout(previousTimeout);
-        }
+        const channelTimers = typing[message.channel_id];
+        if (!channelTimers) return;
+        typing[message.channel_id] = channelTimers.filter((typing) => {
+            if (typing.user.id === message.user_id) {
+                clearTimeout(typing.timeout);
+                return false;
+            }
+            return true;
+        });
         typing = typing;
     }
 
     function onTyping(message) {
-        const previousTimeout = typing[message.contactId];
-        if (previousTimeout) {
-            clearTimeout(previousTimeout);
+        if (!message) return;
+        const previousTyping = typing[message.channel_id];
+        if (previousTyping) {
+            previousTyping.filter((typing) => {
+                if (typing.user.id === message.user.id) {
+                    clearTimeout(typing.timeout);
+                    return false;
+                }
+                return true;
+            });
+        } else {
+            typing[message.channel_id] = [];
         }
 
-        typing[message.contactId] = setTimeout(() => {
-            delete typing[message.contactId];
-            typing = typing;
-        }, TYPING_DELAY);
+        typing[message.channel_id].push({
+            user: message.user,
+            timeout: setTimeout(() => {
+                typing[message.channel_id] = typing[message.channel_id].filter((typing) => {
+                    return typing.user.id !== message.user.id;
+                });
+                typing = typing;
+            }, TYPING_DELAY)
+        });
+        console.log('Typing: ', typing);
         typing = typing;
     }
 
@@ -131,7 +149,9 @@
                                 messageStore={messageStore}
                                 picture="/assets/no_profile_picture.jpg"
                                 bind:selected={selectedContact}
-                                typing={!!typing[contact.id]}
+                                typing={(typing[contact.channel_id] ?? []).some((typing) => {
+                                    return typing.user.id === contact.user_id;
+                                })}
                         />
                     {/each}
                 {/if}
@@ -144,7 +164,10 @@
                         token={data.token}
                         user={data.user}
                         channelId={selectedContact.channel_id}
-                        contactTyping={!!typing[selectedContact.id]}
+                        typingUsers={(typing[selectedContact.channel_id] ?? []).map((typing) => {
+                            console.log(typing);
+                            return typing.user;
+                        })}
                     />
                 {/key}
             {/if}

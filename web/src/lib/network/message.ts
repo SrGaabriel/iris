@@ -27,18 +27,18 @@ export function loadProto() {
 
         Packet = root.lookupType("Packet");
     });
-    // SERVERBOUND
-    loadProtoFile(CHANNEL_READ_ID, "ChannelRead", false);
-    loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
-
-    // CLIENTBOUND
-    loadProtoFile(MESSAGE_CREATED_ID, "MessageCreated", true);
-    loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
-    loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
-    loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);
-    loadProtoFile(MESSAGE_DELETED_ID, "MessageDeleted", true);
-    loadProtoFile(REACTION_ADDED_ID, "ReactionAdded", true);
-    loadProtoFile(REACTION_REMOVED_ID, "ReactionRemoved", true);
+    // // SERVERBOUND
+    // loadProtoFile(CHANNEL_READ_ID, "ChannelRead", false);
+    // loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
+    //
+    // // CLIENTBOUND
+    // loadProtoFile(MESSAGE_CREATED_ID, "MessageCreated", true);
+    // loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
+    // loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
+    // loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);
+    // loadProtoFile(MESSAGE_DELETED_ID, "MessageDeleted", true);
+    // loadProtoFile(REACTION_ADDED_ID, "ReactionAdded", true);
+    // loadProtoFile(REACTION_REMOVED_ID, "ReactionRemoved", true);
 }
 
 function loadProtoFile(id: number, name: string, clientbound: boolean): any {

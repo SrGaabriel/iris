@@ -6,7 +6,7 @@
         addReaction,
         deleteReaction,
         editMessage,
-        excludeMessage,
+        excludeMessage, fetchContact,
         fetchMessages,
         sendMessage
     } from "$lib/network/api.ts";
@@ -25,8 +25,8 @@
 
     export let token;
     export let user;
-    export let name;
     export let channelId;
+    export let typingUsers;
 
     let typingMessage = '';
 
@@ -103,7 +103,6 @@
     function onMessageCreate(creation) {
         if (!creation) return;
         let message = creation.message;
-        console.log(message);
         if (message.channel_id === channelId && message.user_id !== user.id) {
             messages = [...messages, message];
             setTimeout(() => {
@@ -135,17 +134,19 @@
     }
 
     function onReactionAdd(reaction) {
-        if (!reaction) return;
-        const message = messages.find((m) => m.id === reaction.messageId);
-        if (!message) return; // TODO: fetch message
-        locallyAddReaction(message, reaction.userId, reaction.reactionId, reaction.reactionCount, reaction.emoji);
+        console.log(reaction);
+        if (!reaction || reaction.channel_id !== channelId) return;
+        const message = messages.find((m) => m.id === reaction.message_id);
+        if (!message || reaction.user_id === user.id) return; // TODO: fetch message
+        locallyAddReaction(message, reaction.user_id, reaction.reaction_id, reaction.reaction_count, reaction.emoji);
     }
 
     function onReactionRemoval(reaction) {
-        if (!reaction) return;
-        const message = messages.find((m) => m.id === reaction.messageId);
+        console.log(reaction);
+        if (!reaction || reaction.channel_id !== channelId) return;
+        const message = messages.find((m) => m.id === reaction.message_id);
         if (!message) return; // TODO: fetch message
-        locallyRemoveReaction(message, reaction.userId, reaction.reactionId, reaction.reactionCount);
+        locallyRemoveReaction(message, reaction.user_id, reaction.reaction_id, reaction.reaction_count);
     }
 
     function onBulkMessagesRead(reading) {
@@ -172,6 +173,7 @@
         sendMessage(token, channelId, trimmed, replyingTo?.id).then((message) => {
             clearTimeout(typingTimeout);
             clearState();
+            userTyping = false;
             messages = [...messages, message];
             typingMessage = '';
             inputElement.style.height='24px';
@@ -310,7 +312,7 @@
     function continuousTyping() {
         userTyping = true;
         server.sendPacket(TYPING_REQUEST_ID, {
-            channelId: channelId
+            channel_id: channelId
         });
         typingTimeout = setTimeout(() => {
             if (typingContent === typingMessage) {
@@ -322,11 +324,13 @@
         }, TYPING_DELAY * 0.7);
     }
 
-    function getUserObject(id) {
+    function getUserObject(id, then) {
         if (id === user.id) {
-            return user;
+            then(user);
         } else {
-            return contact;
+            return fetchContact(token, id).then((contact) => {
+                then(contact);
+            });
         }
     }
 
@@ -379,10 +383,14 @@
     </div>
     <div class="footer">
         <div class="typing-container">
-            <!--{#if contactTyping}-->
-            <!--    <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>-->
-            <!--    <span class="typing">{contact.name} is currently typing...</span>-->
-            <!--{/if}-->
+            {#if typingUsers.length > 0}
+                <img src="/assets/typing.svg" alt="Typing..." class="typing-gif"/>
+                {#if typingUsers.length === 1}
+                    <span class="typing">{typingUsers[0].name} is currently typing...</span>
+                {:else}
+                    <span class="typing">Several people are currently typing...</span>
+                {/if}
+            {/if}
         </div>
         <div class="alert-container">
             <div class="alert-position">

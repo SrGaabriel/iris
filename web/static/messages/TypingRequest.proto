@@ -1,6 +1,0 @@
-syntax="proto3";
-package messages;
-
-message TypingRequest {
-  int64 channel_id = 1;
-}

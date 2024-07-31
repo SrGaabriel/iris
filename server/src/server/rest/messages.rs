@@ -91,7 +91,7 @@ pub async fn create_message(
         reply_to: inserted_message.reply_to,
         reactions: vec![]
     };
-    send_packet_to_channel(state, channel_id, || Box::new(MessageCreated {
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageCreated {
         message: message.clone()
     })).await;
 
@@ -197,7 +197,7 @@ pub async fn edit_message(
         reactions: serde_json::from_str(&message.reactions).unwrap()
     };
 
-    send_packet_to_channel(state, channel_id, || Box::new(MessageEdited {
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageEdited {
         new_content: new_content.clone(),
         editor_id: user.user_id,
         message_id: message.message_id,
@@ -226,7 +226,7 @@ pub async fn delete_message(
     }
     let message = deleted.unwrap();
 
-    send_packet_to_channel(state, channel_id, || Box::new(MessageDeleted {
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageDeleted {
         message_id: message.message_id,
         channel_id: message.channel_id
     })).await;

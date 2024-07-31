@@ -20,6 +20,7 @@ impl GatewayHandler for ReceiptGatewayHandler {
     }
 
     async fn handle(&self, user: &User, state: &mut RwLockWriteGuard<AppState>, message: &PacketMessage) {
+        return; // TODO: Remove this line when the receipts system is enabled.
         let request = ChannelRead::decode_data(&message.data).expect("Failed to decode context read packet");
         let query = diesel::update(messagesTable)
             .filter(channel_id.eq(request.channel_id))

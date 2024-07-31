@@ -1,6 +1,6 @@
 use iris_macros::packet;
 use serde::{Deserialize, Serialize};
-use crate::server::rest::MessageObject;
+use crate::server::rest::{MessageObject, StandardUser};
 // SERVERBOUND
 
 #[packet(id = 1)]
@@ -10,7 +10,7 @@ pub struct ChannelRead {
 
 #[packet(id = 2)]
 pub struct TypingRequest {
-    pub context_id: i64
+    pub channel_id: i64
 }
 
 // CLIENTBOUND
@@ -27,8 +27,9 @@ pub struct MessagesRead {
 }
 
 #[packet(id = 4)]
-pub struct ContactTyping {
-    pub contact_id: i64
+pub struct ChannelTyping {
+    pub user: StandardUser,
+    pub channel_id: i64
 }
 
 #[packet(id = 5)]
@@ -52,7 +53,7 @@ pub struct ReactionAdded {
     pub emoji: String,
     pub reaction_count: i32,
     pub reaction_id: i32,
-    pub context_id: i64
+    pub channel_id: i64
 }
 
 #[packet(id = 8)]
@@ -62,5 +63,5 @@ pub struct ReactionRemoved {
     pub emoji: String,
     pub reaction_count: i32,
     pub reaction_id: i32,
-    pub context_id: i64
+    pub channel_id: i64
 }
