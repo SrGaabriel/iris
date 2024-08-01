@@ -7,13 +7,11 @@ use diesel::prelude::*;
 use diesel::RunQueryDsl;
 use jwt::SignWithKey;
 use serde::Deserialize;
-use rand::random;
-use crate::entity::user::User;
-use crate::entity::user::users::dsl::users;
-use crate::entity::user::users::username;
-use crate::entity::UserAuthResponse;
+use crate::schema::users::User;
+use crate::schema::users::users::dsl::users;
+use crate::schema::users::users::username;
 use crate::server::rest;
-use crate::server::rest::{IrisResponse, ok, UserSelfResponse};
+use crate::server::rest::{IrisResponse, ok, UserSelfResponse, UserAuthResponse};
 use crate::SharedState;
 
 pub async fn login(
@@ -30,7 +28,7 @@ pub async fn login(
         let password_hash = PasswordHash::new(&*user.password).expect("Failed to create password hash");
         if state.argon.verify_password(request.password.as_bytes(), &password_hash).is_ok() {
             let mut claims = BTreeMap::new();
-            claims.insert("id", user.id);
+            claims.insert("id", user.user_id);
             let signed = claims.sign_with_key(&state.jwt_key).expect("Failed to sign JWT");
 
             return ok(UserAuthResponse {
@@ -51,7 +49,7 @@ pub async fn register(
     let hashed_password = state.argon.hash_password(request.password.as_bytes(), &state.argon_salt).expect("Failed to hash password");
 
     let new_user = User {
-        id,
+        user_id: id,
         name: request.name.clone(),
         username: request.username.clone(),
         password: hashed_password.to_string(),
@@ -64,7 +62,7 @@ pub async fn register(
         .expect("Failed to insert user");
 
     let mut claims = BTreeMap::new();
-    claims.insert("id", user.id);
+    claims.insert("id", user.user_id);
     let signed = claims.sign_with_key(&state.jwt_key).expect("Failed to sign JWT");
 
     ok(UserAuthResponse {

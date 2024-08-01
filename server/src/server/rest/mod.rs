@@ -2,8 +2,8 @@ use axum::http::StatusCode;
 use axum::Json;
 use axum_extra::either::Either;
 use serde::{Deserialize, Serialize};
-use crate::entity::reactions::ReactionSummary;
-pub use crate::entity::user::User;
+use crate::schema::reactions::ReactionSummary;
+pub use crate::schema::users::User;
 
 pub mod auth;
 pub mod contacts;
@@ -11,6 +11,7 @@ pub mod user;
 pub mod middlewares;
 pub mod messages;
 pub(crate) mod reactions;
+pub(crate) mod search;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 
@@ -36,6 +37,12 @@ pub fn error<T: Serialize>(status: StatusCode, message: &str) -> IrisResponse<T>
 }
 
 #[derive(Serialize)]
+pub struct UserAuthResponse {
+    pub user: UserSelfResponse,
+    pub token: String
+}
+
+#[derive(Serialize)]
 pub struct UserSelfResponse {
     pub id: i64,
     pub name: String,
@@ -46,7 +53,7 @@ pub struct UserSelfResponse {
 impl From<User> for UserSelfResponse {
     fn from(user: User) -> Self {
         UserSelfResponse {
-            id: user.id,
+            id: user.user_id,
             name: user.name,
             username: user.username,
             email: user.email
@@ -61,73 +68,32 @@ pub struct PrimordialMessage {
     pub receipt: i16
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct StandardUser {
+    pub id: i64,
+    pub name: String,
+    pub username: String
+}
+
 #[derive(Serialize)]
 pub struct ContactResponse {
-    pub id: i64,
+    pub user_id: i64,
+    pub channel_id: i64,
     pub name: String,
     pub username: String,
     pub last_message: Option<PrimordialMessage>,
     pub unread_count: i64
 }
 
-#[derive(Serialize)]
-pub struct PrivateMessage {
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct MessageObject {
     pub id: i64,
     pub content: String,
     pub user_id: i64,
-    pub context: i64,
+    pub channel_id: i64,
     pub receipt: i16,
     pub edited: bool,
-    pub reply_to: Option<i64>
-}
-
-#[derive(Serialize)]
-pub struct CompletePrivateMessage {
-    pub id: i64,
-    pub content: String,
-    pub user_id: i64,
-    pub context: i64,
-    pub receipt: i16,
-    pub edited: bool,
-    pub reply_to: Option<PrivateMessage>
-}
-
-impl CompletePrivateMessage {
-    pub fn with_reply(message: &crate::entity::message::Message, reply_message: Option<PrivateMessage>) -> Self {
-        CompletePrivateMessage {
-            id: message.id,
-            content: String::from(&message.content),
-            user_id: message.user_id,
-            context: message.context,
-            receipt: message.reception_status,
-            edited: message.edited,
-            reply_to: reply_message
-        }
-    }
-}
-
-impl From<&crate::entity::message::Message> for PrivateMessage {
-    fn from(message: &crate::entity::message::Message) -> Self {
-        PrivateMessage {
-            id: message.id,
-            content: String::from(&message.content),
-            user_id: message.user_id,
-            context: message.context,
-            receipt: message.reception_status,
-            edited: message.edited,
-            reply_to: message.reply_to
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub struct IterablePrivateMessage {
-    pub id: i64,
-    pub content: String,
-    pub user_id: i64,
-    pub context: i64,
-    pub receipt: i16,
-    pub edited: bool,
+    pub author: StandardUser,
     pub reply_to: Option<i64>,
     pub reactions: Vec<ReactionSummary>
 }
@@ -142,4 +108,14 @@ pub struct ReactionAddRequest {
 pub struct ReactionAddResponse {
     pub reaction_id: i32,
     pub reaction_count: i32
+}
+
+#[derive(Serialize)]
+pub struct GeneralSearchResponse {
+    pub users: Vec<StandardUser>
+}
+
+#[derive(Serialize)]
+pub struct PrivateChannel {
+    pub channel_id: i64
 }

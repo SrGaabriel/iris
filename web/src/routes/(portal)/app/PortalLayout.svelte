@@ -6,16 +6,27 @@
 
     let isSidebarExpanded = false;
 
+    const SidebarButton = {
+        render() {
+            return {
+                template: `
+                    <a href={"/app/" + props.page} class="sidebar-button" data-active={getActivePage() === props.page}>
+                        <i class="fa-solid fa-inbox"></i>
+                        <span class="button-label">Inbox</span>
+                    </a>
+                `
+            }
+        }
+    }
+
     // TODO: fix workaround
     function getActivePage() {
         if (!browser) return;
         const url = window.location.pathname;
-        if (url.includes('/app/contacts')) {
-            return 'contacts';
-        } else if (url.includes('/app/chats')) {
-            return 'chats';
-        } else if (url.includes('/app/settings')) {
-            return 'settings';
+        if (url.includes('/app/chat')) {
+            return 'chat';
+        } else if (url.includes('/app/explore')) {
+            return 'explore';
         }
     }
 </script>
@@ -33,10 +44,14 @@
                     <i class="fa-solid fa-inbox"></i>
                     <span class="button-label">Inbox</span>
                 </button>
-                <button class="sidebar-button" data-active={getActivePage() === 'contacts'}>
+                <a href="/app/chat" class="sidebar-button" data-active={getActivePage() === 'chat'}>
                     <i class="fa-regular fa-message"></i>
-                    <span class="button-label">Contacts</span>
-                </button>
+                    <span class="button-label">Chat</span>
+                </a>
+                <a href="/app/explore" class="sidebar-button" data-active={getActivePage() === 'explore'}>
+                    <i class="fa-regular fa-hashtag"></i>
+                    <span class="button-label">Explore</span>
+                </a>
                 <button class="sidebar-button" data-active={getActivePage() === 'notes'}>
                     <i class="fa-regular fa-note-sticky"></i>
                     <span class="button-label">Notes</span>
@@ -178,12 +193,14 @@
         border-radius: 12px;
         aspect-ratio: 1/1;
         cursor: pointer;
+        text-decoration: none;
         transition: all 125ms ease-in-out;
     }
     .sidebar-button[data-active="false"]:hover {
         background-color: var(--icon-selected);
         color: var(--icon-selected-contrast);
-        opacity: 0.6;
+        opacity: 0.8;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     }
     .sidebar.expanded .sidebar-button {
         justify-content: flex-start;

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package messages;
-
-message MessagesRead {
-    int64 reader_id = 1;
-    repeated int64 message_ids = 2 [packed = true];
-}

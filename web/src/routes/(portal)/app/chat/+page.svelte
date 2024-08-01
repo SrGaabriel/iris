@@ -6,13 +6,14 @@
     import TargetedStore from '../../../../util/targetedStore.ts';
     import {
         CONTACT_TYPING_ID,
-        CONTEXT_READ_ID,
+        CHANNEL_READ_ID,
         MESSAGE_CREATED_ID
     } from "$lib/network/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
     import {fetchContacts} from "$lib/network/api.ts"
     import Chat from "$lib/components/Chat.svelte";
     import PortalLayout from "../PortalLayout.svelte";
+    import {pushState} from "$app/navigation";
 
     export let data;
     let contacts = [];
@@ -36,43 +37,59 @@
             contacts = contact_list;
             return contact_list;
         }).then((contact_list) => {
-            if (data.requestedContactId) {
+            if (data.requestedContactChannelId) {
                 let foundContact = contact_list.find(contact =>
-                    contact.id === parseInt(data.requestedContactId)
+                    contact.channel_id === parseInt(data.requestedContactChannelId)
                 );
                 if (foundContact) {
                     selectedContact = foundContact;
-                    history.pushState({}, '', `/app/contacts/${data.requestedContactId}`);
+                    pushState(`/app/chat/${data.requestedContactChannelId}`, null);
                 }
             }
         });
     }
 
-    function onMessageCreated(message) {
+    function onMessageCreated(create) {
+        const message = create.message;
         messageStore.set(message);
-        if (message.userId === data.user.id)
-            return;
-        const previousTimeout = typing[message.userId];
-        if (previousTimeout) {
-            delete typing[message.userId];
-            clearTimeout(previousTimeout);
-        }
-        if (selectedContact && message.userId === selectedContact.id) {
-            server.sendPacket(CONTEXT_READ_ID, {contextId: selectedContact.id});
-        }
+        const channelTimers = typing[message.channel_id];
+        if (!channelTimers) return;
+        typing[message.channel_id] = channelTimers.filter((typing) => {
+            if (typing.user.id === message.user_id) {
+                clearTimeout(typing.timeout);
+                return false;
+            }
+            return true;
+        });
         typing = typing;
     }
 
     function onTyping(message) {
-        const previousTimeout = typing[message.contactId];
-        if (previousTimeout) {
-            clearTimeout(previousTimeout);
+        if (!message) return;
+        if (message.user.id === data.user.id) return;
+        const previousTyping = typing[message.channel_id];
+        if (previousTyping) {
+            previousTyping.filter((typing) => {
+                if (typing.user.id === message.user.id) {
+                    clearTimeout(typing.timeout);
+                    return false;
+                }
+                return true;
+            });
+        } else {
+            typing[message.channel_id] = [];
         }
 
-        typing[message.contactId] = setTimeout(() => {
-            delete typing[message.contactId];
-            typing = typing;
-        }, TYPING_DELAY);
+        typing[message.channel_id].push({
+            user: message.user,
+            timeout: setTimeout(() => {
+                typing[message.channel_id] = typing[message.channel_id].filter((typing) => {
+                    return typing.user.id !== message.user.id;
+                });
+                typing = typing;
+            }, TYPING_DELAY)
+        });
+        console.log('Typing: ', typing);
         typing = typing;
     }
 
@@ -133,7 +150,9 @@
                                 messageStore={messageStore}
                                 picture="/assets/no_profile_picture.jpg"
                                 bind:selected={selectedContact}
-                                typing={!!typing[contact.id]}
+                                typing={(typing[contact.channel_id] ?? []).some((typing) => {
+                                    return typing.user.id === contact.user_id;
+                                })}
                         />
                     {/each}
                 {/if}
@@ -145,8 +164,11 @@
                     <Chat
                         token={data.token}
                         user={data.user}
-                        contact={selectedContact}
-                        contactTyping={!!typing[selectedContact.id]}
+                        channelId={selectedContact.channel_id}
+                        typingUsers={(typing[selectedContact.channel_id] ?? []).map((typing) => {
+                            console.log(typing);
+                            return typing.user;
+                        })}
                     />
                 {/key}
             {/if}

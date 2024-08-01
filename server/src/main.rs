@@ -1,5 +1,5 @@
 mod server;
-mod entity;
+mod schema;
 mod database;
 mod util;
 
@@ -28,7 +28,8 @@ use tower_http::auth::{AsyncRequireAuthorizationLayer, AsyncAuthorizeRequest};
 use tower_http::cors::CorsLayer;
 use tracing::Subscriber;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use crate::entity::user::User;
+use crate::schema::ctes::select_messages_from;
+use crate::schema::users::User;
 use crate::server::gateway::Gateway;
 use crate::server::messages::Packet;
 use crate::server::rest::middlewares::{authorize, IrisAuth};
@@ -60,22 +61,24 @@ async fn main() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_websockets=debug,tower_http=debug                                      ,diesel=debug".into()),
+                .unwrap_or_else(|_| "example_websockets=debug,tower_http=info,diesel=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
     let app = Router::new()
         .route("/ws", get(server::subscribe_chat_handshake))
+        .route("/api/search", post(server::rest::search::search))
         .route("/api/users/@me", get(server::rest::user::get_self))
         .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
         .route("/api/contacts/:contact_id", get(server::rest::contacts::get_contact))
-        .route("/api/channels/:context_id/messages", post(server::rest::messages::create_message))
-        .route("/api/channels/:context_id/messages", get(server::rest::messages::get_messages))
-        .route("/api/channels/:context_id/messages/:message_id", put(server::rest::messages::edit_message))
-        .route("/api/channels/:context_id/messages/:message_id", delete(server::rest::messages::delete_message))
-        .route("/api/channels/:context_id/messages/:message_id/reactions", post(server::rest::reactions::add_reaction))
-        .route("/api/channels/:context_id/messages/:message_id/reactions/:reaction_id", delete(server::rest::reactions::remove_reaction))
+        .route("/api/contacts/:contact_id/chat", post(server::rest::contacts::chat))
+        .route("/api/channels/:channel_id/messages", post(server::rest::messages::create_message))
+        .route("/api/channels/:channel_id/messages", get(server::rest::messages::get_messages))
+        .route("/api/channels/:channel_id/messages/:message_id", put(server::rest::messages::edit_message))
+        .route("/api/channels/:channel_id/messages/:message_id", delete(server::rest::messages::delete_message))
+        .route("/api/channels/:channel_id/messages/:message_id/reactions", post(server::rest::reactions::add_reaction))
+        .route("/api/channels/:channel_id/messages/:message_id/reactions/:reaction_id", delete(server::rest::reactions::remove_reaction))
         .route_layer(
             middleware::from_fn(authorize)
         )

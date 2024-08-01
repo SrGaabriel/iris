@@ -1,6 +1,6 @@
 use diesel::{allow_tables_to_appear_in_same_query, Identifiable, Insertable, Queryable, Selectable};
-use crate::entity::message::messages;
-use crate::entity::user::users;
+use crate::schema::messages::messages;
+use crate::schema::users::users;
 use diesel::sql_types::{BigInt, Text, Varchar, Integer, Bool, Serial};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -49,12 +49,6 @@ diesel::joinable!(reactions -> messages (message_id));
 diesel::joinable!(reaction_users -> reactions (reaction_id));
 diesel::joinable!(reaction_users -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    messages,
-    reactions,
-    reaction_users,
-);
-
 #[derive(Insertable)]
 #[diesel(table_name = reactions)]
 pub struct ReactionInsert {
@@ -69,7 +63,7 @@ pub struct ReactionUserInsert {
     pub user_id: i64
 }
 
-#[derive(Debug, Serialize, Deserialize, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, QueryableByName, Clone, PartialEq)]
 pub struct ReactionSummary {
     #[sql_type = "Text"]
     pub emoji: String,

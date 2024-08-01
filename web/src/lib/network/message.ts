@@ -3,7 +3,7 @@ export const CLIENTBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 export const SERVERBOUND_ID_TO_PROTOBUF_OBJECT: { [key: number]: any } = {};
 
 // SERVERBOUND
-export const CONTEXT_READ_ID = 1;
+export const CHANNEL_READ_ID = 1;
 export const TYPING_REQUEST_ID = 2;
 
 // CLIENTBOUND
@@ -27,18 +27,18 @@ export function loadProto() {
 
         Packet = root.lookupType("Packet");
     });
-    // SERVERBOUND
-    loadProtoFile(CONTEXT_READ_ID, "ContextRead", false);
-    loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
-
-    // CLIENTBOUND
-    loadProtoFile(MESSAGE_CREATED_ID, "MessageCreated", true);
-    loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
-    loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
-    loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);
-    loadProtoFile(MESSAGE_DELETED_ID, "MessageDeleted", true);
-    loadProtoFile(REACTION_ADDED_ID, "ReactionAdded", true);
-    loadProtoFile(REACTION_REMOVED_ID, "ReactionRemoved", true);
+    // // SERVERBOUND
+    // loadProtoFile(CHANNEL_READ_ID, "ChannelRead", false);
+    // loadProtoFile(TYPING_REQUEST_ID, "TypingRequest", false);
+    //
+    // // CLIENTBOUND
+    // loadProtoFile(MESSAGE_CREATED_ID, "MessageCreated", true);
+    // loadProtoFile(MESSAGES_READ_ID, "MessagesRead", true);
+    // loadProtoFile(CONTACT_TYPING_ID, "ContactTyping", true);
+    // loadProtoFile(MESSAGE_EDITED_ID, "MessageEdited", true);
+    // loadProtoFile(MESSAGE_DELETED_ID, "MessageDeleted", true);
+    // loadProtoFile(REACTION_ADDED_ID, "ReactionAdded", true);
+    // loadProtoFile(REACTION_REMOVED_ID, "ReactionRemoved", true);
 }
 
 function loadProtoFile(id: number, name: string, clientbound: boolean): any {
@@ -55,29 +55,19 @@ function loadProtoFile(id: number, name: string, clientbound: boolean): any {
 }
 
 export function encodePacket(id: number, packet: object) {
-    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[id];
     const message = {
         id: id,
-        data: object.encode(packet).finish()
+        data: encodePacketData(packet)
     };
     return Packet.encode(message).finish();
 }
 
 function encodePacketData(packet: any) {
-    const object = SERVERBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
-    if (object) {
-        return object.encode(packet).finish();
-    } else {
-        console.log("Unknown packet id: " + packet.id);
-    }
+    // bytes of json
+    return new TextEncoder().encode(JSON.stringify(packet));
 }
 
 export function decodePacket(packet: any) {
-    const object = CLIENTBOUND_ID_TO_PROTOBUF_OBJECT[packet.id];
-    if (object) {
-        return object.decode(packet.data);
-    } else {
-        console.log("Unknown packet id: " + packet.id);
-    }
+    return JSON.parse(new TextDecoder().decode(packet.data));
 }
 

@@ -10,9 +10,9 @@ use axum::response::IntoResponse;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use jwt::VerifyWithKey;
 
-use crate::entity::user::User;
-use crate::entity::user::users::dsl::users;
-use crate::entity::user::users::id;
+use crate::schema::users::User;
+use crate::schema::users::users::dsl::users;
+use crate::schema::users::users::user_id as table_user_id;
 use crate::server::rest::error;
 use crate::SharedState;
 
@@ -52,7 +52,7 @@ pub async fn authorize(mut req: Request, next: Next) -> Response {
         }
 
         users
-            .filter(id.eq(*user_id.unwrap()))
+            .filter(table_user_id.eq(*user_id.unwrap()))
             .select(User::as_select())
             .first::<User>(&mut state.database)
     };

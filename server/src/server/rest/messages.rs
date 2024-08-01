@@ -2,30 +2,32 @@ use axum::{debug_handler, Extension, Json};
 use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
-use diesel::{debug_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, Table};
+use diesel::{debug_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, sql_query, Table};
+use diesel::dsl::{exists};
 use diesel::pg::Pg;
-use diesel::sql_types::BigInt;
+use diesel::sql_types::{BigInt, Bool, Nullable, SmallInt, Text};
 use diesel::prelude::*;
 use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
-
-use crate::entity::message::{CompleteMessage, Message};
-use crate::entity::message::messages::{content, context, edited, id as messageId, user_id};
-use crate::entity::message::messages::dsl::messages as messagesTable;
-use crate::entity::message::messages::dsl::messages;
-use crate::entity::user::User;
-use crate::server::gateway::context::send_packet_to_context;
-use crate::server::messages::{MessageCreated, MessageDeleted, MessageEdited};
-use crate::server::rest::{CompletePrivateMessage, error, IrisResponse, IterablePrivateMessage, no_content, ok, PrivateMessage};
+use crate::schema::channels::channel_members::dsl::channel_members;
+use crate::schema::ctes::select_messages_from;
+use crate::schema::messages::{CompleteMessage, Message};
+use crate::schema::messages::messages::{content, channel_id as messageChannelId, edited, message_id as messageId, user_id};
+use crate::schema::messages::messages::dsl::messages as messagesTable;
+use crate::schema::messages::messages::dsl::messages;
+use crate::schema::users::User;
+use crate::server::gateway::context::{send_packet_to_channel, send_packet_to_context};
+use crate::server::gateway::messages::{MessageCreated, MessageDeleted, MessageEdited};
+use crate::server::rest::{error, IrisResponse, MessageObject, no_content, ok, StandardUser};
 use crate::SharedState;
 
 #[debug_handler]
 pub async fn create_message(
-    Path(contact_id): Path<i64>,
+    Path(channel_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
-) -> IrisResponse<CompletePrivateMessage> {
+) -> IrisResponse<MessageObject> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
     let message = Json::from_bytes(request.into_body().collect().await.unwrap().to_bytes().as_ref());
     if message.is_err() {
@@ -35,123 +37,111 @@ pub async fn create_message(
 
     let mut state = state.write().await;
 
-    let reply_message: Option<PrivateMessage> = if let Some(reply) = message.reply_to {
-        let query = messages
-            .filter(messageId.eq(reply))
-            .get_result::<Message>(&mut state.database).optional();
+    if let Some(reply) = message.reply_to {
+        let query = diesel::select(exists(
+            messages
+                .filter(messageChannelId.eq(channel_id))
+                .filter(messageId.eq(reply))
+        )).get_result::<bool>(&mut state.database);
 
         if query.is_err() {
             return error(StatusCode::NOT_FOUND, "Reply not found");
         }
         let result = query.unwrap();
-        if result.is_none() {
+        if !result {
             return error(StatusCode::NOT_FOUND, "Reply not found");
         }
-
-        Some(PrivateMessage::from(&result.unwrap()))
-    } else {
-        None
-    };
+    }
 
     let id: i64 = { state.snowflake_issuer.generate().value() as i64 };
-    let new_message = Message {
-        id,
-        user_id: user.id,
-        content: message.content.clone(),
-        context: contact_id,
-        context_type: 0,
-        reception_status: 0,
-        edited: false,
-        reply_to: message.reply_to
-    };
+    let query = sql_query(select_messages_from(
+        r#"
+        INSERT INTO messages (user_id, message_id, content, channel_id, reception_status, edited, reply_to)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+        "#
+    ))
+        .bind::<BigInt, _>(user.user_id)
+        .bind::<BigInt, _>(id)
+        .bind::<Text, _>(message.content.clone())
+        .bind::<BigInt, _>(channel_id)
+        .bind::<SmallInt, _>(0)
+        .bind::<Bool, _>(false)
+        .bind::<Nullable<BigInt>, _>(message.reply_to)
+        .get_result::<CompleteMessage>(&mut state.database);
 
-    let inserted_message = diesel::insert_into(messages)
-        .values(&new_message)
-        .get_result::<Message>(&mut state.database)
-        .expect("Failed to insert message");
+    if query.is_err() {
+        query.unwrap();
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "Error inserting message");
+    }
+    let inserted_message = query.unwrap();
 
-    let message = MessageCreated {
-        id: inserted_message.id,
-        content: inserted_message.content.clone(),
+    let message = MessageObject {
+        id: inserted_message.message_id,
         user_id: inserted_message.user_id,
-        context: inserted_message.context,
-        reply_to: inserted_message.reply_to
+        content: inserted_message.content,
+        channel_id: inserted_message.channel_id,
+        receipt: inserted_message.reception_status,
+        edited: inserted_message.edited,
+        author: StandardUser {
+            id: inserted_message.user_id,
+            name: inserted_message.author_name.clone(),
+            username: inserted_message.author_username.clone()
+        },
+        reply_to: inserted_message.reply_to,
+        reactions: vec![]
     };
-    send_packet_to_context(&mut state.packet_queue, user.id, Box::new(message.clone())).await;
-    send_packet_to_context(&mut state.packet_queue, contact_id, Box::new(message)).await;
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageCreated {
+        message: message.clone()
+    })).await;
 
-    ok(CompletePrivateMessage::with_reply(&inserted_message, reply_message))
+    ok(message)
 }
 
 // This method will get the messages between the user and the specified contact
 pub async fn get_messages(
-    Path(contact_id): Path<i64>,
+    Path(channel_id): Path<i64>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
-) -> IrisResponse<Vec<IterablePrivateMessage>> {
+) -> IrisResponse<Vec<MessageObject>> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
 
     let connection = &mut state.write().await.database;
-    let query = r#"
-WITH reactions_with_me AS (
-    SELECT
-        reactions.reaction_id,
-        reactions.message_id,
-        reactions.emoji,
-        reactions.reaction_count,
-        bool_or(reaction_users.user_id = $1) AS me
-    FROM
-        reactions
-    LEFT JOIN reaction_users ON reactions.reaction_id = reaction_users.reaction_id
-    GROUP BY
-        reactions.reaction_id, reactions.message_id, reactions.emoji, reactions.reaction_count
-)
-SELECT
-    messages.id,
-    messages.user_id,
-    messages.content,
-    messages.context,
-    messages.reception_status,
-    messages.edited,
-    messages.reply_to,
-    COALESCE(
-        json_agg(
-            json_build_object(
-                'reaction_id', reactions_with_me.reaction_id,
-                'count', reactions_with_me.reaction_count,
-                'me', reactions_with_me.me,
-                'emoji', reactions_with_me.emoji
+
+    {
+        let is_member = diesel::select(
+            exists(
+                channel_members
+                    .filter(crate::schema::channels::channel_members::user_id.eq(user.user_id))
+                    .filter(crate::schema::channels::channel_members::channel_id.eq(channel_id))
             )
-        ) FILTER (WHERE reactions_with_me.message_id IS NOT NULL AND reactions_with_me.reaction_count > 0),
-        '[]'
-    ) AS reactions
-FROM
-    messages
-LEFT JOIN reactions_with_me ON reactions_with_me.message_id = messages.id
-WHERE
-    messages.context_type = 0
-    AND (
-        (messages.user_id = $1 AND messages.context = $2)
-        OR (messages.user_id = $2 AND messages.context = $1)
-    )
-GROUP BY
-    messages.id
-ORDER BY
-    messages.id DESC;
-    "#;
-    let query = diesel::sql_query(query)
-        .bind::<BigInt, _>(user.id)
-        .bind::<BigInt, _>(contact_id);
+        ).get_result::<bool>(connection).expect("Error checking if user is a member");
+
+        if !is_member {
+            return error(StatusCode::FORBIDDEN, "You are not a member of this channel");
+        }
+    }
+
+    let query = sql_query(select_messages_from(
+        "SELECT * FROM messages WHERE channel_id = $2"
+    ))
+        .bind::<BigInt, _>(user.user_id)
+        .bind::<BigInt, _>(channel_id);
     let bilateral_messages = query.load::<CompleteMessage>(connection).expect("Error loading messages");
 
     ok(bilateral_messages.iter().map(|m| {
-        IterablePrivateMessage {
-            id: m.id,
+        MessageObject {
+            id: m.message_id,
             user_id: m.user_id,
             content: m.content.clone(),
-            context: m.context,
+            channel_id: m.channel_id,
             receipt: m.reception_status,
             edited: m.edited,
+            author: StandardUser {
+                id: m.user_id,
+                name: m.author_name.clone(),
+                username: m.author_username.clone()
+            },
             reply_to: m.reply_to,
             reactions: serde_json::from_str(&m.reactions).unwrap()
         }
@@ -162,7 +152,7 @@ pub async fn edit_message(
     Path((channel_id, message_id)): Path<(i64, i64)>,
     Extension(state): Extension<SharedState>,
     request: Request<Body>
-) -> IrisResponse<PrivateMessage> {
+) -> IrisResponse<MessageObject> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
     let message = Json::from_bytes(request.into_body().collect().await.unwrap().to_bytes().as_ref());
     if message.is_err() {
@@ -171,31 +161,50 @@ pub async fn edit_message(
     let message: Json<MessageCreationRequest> = message.unwrap();
 
     let query = messages
-        .filter(context.eq(channel_id))
+        .filter(messageChannelId.eq(channel_id))
         .filter(messageId.eq(message_id))
-        .filter(user_id.eq(user.id));
+        .filter(user_id.eq(user.user_id));
 
-    // now we set both the content and the edited flag to true
     let new_content = message.0.content;
-    let state = &mut state.write().await;
-    let message = diesel::update(query)
-        .set((content.eq(new_content.clone()), edited.eq(true)))
-        .returning(messagesTable::all_columns())
-        .get_result::<Message>(&mut state.database);
+    let mut state = state.write().await;
+    let message = diesel::sql_query(select_messages_from(
+        "UPDATE messages SET content = $2, edited = true WHERE channel_id = $3 AND message_id = $4 and user_id=$1 RETURNING *"
+    ))
+        .bind::<BigInt, _>(user.user_id)
+        .bind::<Text, _>(new_content.clone())
+        .bind::<BigInt, _>(channel_id)
+        .bind::<BigInt, _>(message_id)
+        .get_result::<CompleteMessage>(&mut state.database);
 
     if message.is_err() {
+        message.unwrap();
         return error(StatusCode::NOT_FOUND, "Message not found");
     }
     let message = message.unwrap();
+    let object = MessageObject {
+        id: message.message_id,
+        user_id: message.user_id,
+        content: message.content,
+        channel_id: message.channel_id,
+        receipt: message.reception_status,
+        edited: message.edited,
+        author: StandardUser {
+            id: message.user_id,
+            name: message.author_name.clone(),
+            username: message.author_username.clone()
+        },
+        reply_to: message.reply_to,
+        reactions: serde_json::from_str(&message.reactions).unwrap()
+    };
 
-    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageEdited {
-        message_id: message.id,
-        new_content,
-        editor_id: user.id,
-        context_id: message.context
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageEdited {
+        new_content: new_content.clone(),
+        editor_id: user.user_id,
+        message_id: message.message_id,
+        channel_id: message.channel_id,
     })).await;
 
-    ok(PrivateMessage::from(&message))
+    ok(object)
 }
 
 pub async fn delete_message(
@@ -205,11 +214,11 @@ pub async fn delete_message(
 ) -> IrisResponse<()> {
     let user = request.extensions().get::<User>().cloned().expect("User not found");
 
-    let state = &mut state.write().await;
+    let mut state = state.write().await;
     let query = messages
-        .filter(context.eq(channel_id))
+        .filter(messageChannelId.eq(channel_id))
         .filter(messageId.eq(message_id))
-        .filter(user_id.eq(user.id));
+        .filter(user_id.eq(user.user_id));
     let deleted = diesel::delete(query).returning(messagesTable::all_columns()).get_result::<Message>(&mut state.database);
 
     if deleted.is_err() {
@@ -217,9 +226,9 @@ pub async fn delete_message(
     }
     let message = deleted.unwrap();
 
-    send_packet_to_context(&mut state.packet_queue, channel_id, Box::new(MessageDeleted {
-        message_id: message.id,
-        context_id: channel_id
+    send_packet_to_channel(&mut state, channel_id, || Box::new(MessageDeleted {
+        message_id: message.message_id,
+        channel_id: message.channel_id
     })).await;
 
     no_content()

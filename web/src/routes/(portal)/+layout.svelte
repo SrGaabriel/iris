@@ -34,12 +34,14 @@
         --reaction-selected-border: #2385be;
         --reaction-selected-background: #9fecf4;
         --input-add-emoji-hover: #fff100;
+        --search-button: #4759a7;
+        --search-button-hover: #32407d;
     }
     :global(body:not(.lightmode)) {
         --text-color: #fcfcfc;
-        --icon-color: #7f8497;
+        --icon-color: #bfc7db;
         --icon-selected: #44474a;
-        --icon-selected-contrast: #9fa6bc;
+        --icon-selected-contrast: #bec2d0;
         --light-contrast: #2a2a2a;
         --light-heavier-contrast: #262626;
         --heavy-constrast: #202020;
@@ -68,5 +70,7 @@
         --reaction-selected-border: #c20af4;
         --reaction-selected-background: #841c96;
         --input-add-emoji-hover: #a81fb2;
+        --search-button: #6a8dff;
+        --search-button-hover: #4a6be6;
     }
 </style>

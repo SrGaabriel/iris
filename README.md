@@ -11,7 +11,7 @@ The main technologies implemented in this project are:
 * **Websockets:** powered by `axum`
 * **Rest API:** powered by `axum`
 * **PostgreSQL:** powered by `diesel`
-* **Protobuf:** powered by `prost` and `protobuf.js`
+* **Protobuf _(soon to be dropped)_:** powered by `prost` and `protobuf.js`
 * **Serialization:** powered by `serde`
 * **Authentication:** powered by `jwt`
 * **Hashing:** powered by `argon2`

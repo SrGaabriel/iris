@@ -22,8 +22,8 @@ export async function fetchContact(token: string, contactId) {
     return JSON.parse(text);
 }
 
-export async function fetchMessages(token: string, contactId) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages`, {
+export async function fetchMessages(token: string, channelId) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -33,8 +33,8 @@ export async function fetchMessages(token: string, contactId) {
     return JSON.parse(text);
 }
 
-export async function sendMessage(token: string, contactId, content: string, replyingTo) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages`, {
+export async function sendMessage(token: string, channelId, content: string, replyingTo) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -50,8 +50,8 @@ export async function sendMessage(token: string, contactId, content: string, rep
 }
 
 // Submit edit
-export async function editMessage(token: string, contactId, messageId, content: string) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages/${messageId}`, {
+export async function editMessage(token: string, channelId, messageId, content: string) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages/${messageId}`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -65,8 +65,8 @@ export async function editMessage(token: string, contactId, messageId, content: 
     return JSON.parse(text);
 }
 
-export async function excludeMessage(token: string, contactId, messageId) {
-    return await fetch(`${API}/api/channels/${contactId}/messages/${messageId}`, {
+export async function excludeMessage(token: string, channelId, messageId) {
+    return await fetch(`${API}/api/channels/${channelId}/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -74,8 +74,8 @@ export async function excludeMessage(token: string, contactId, messageId) {
     });
 }
 
-export async function addReaction(token: string, contactId, messageId, emoji) {
-    const response = await fetch(`${API}/api/channels/${contactId}/messages/${messageId}/reactions`, {
+export async function addReaction(token: string, channelId, messageId, emoji) {
+    const response = await fetch(`${API}/api/channels/${channelId}/messages/${messageId}/reactions`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -87,9 +87,28 @@ export async function addReaction(token: string, contactId, messageId, emoji) {
     return response.json()
 }
 
-export async function deleteReaction(token: string, contactId, messageId, reactionId) {
-    return await fetch(`${API}/api/channels/${contactId}/messages/${messageId}/reactions/${reactionId}`, {
+export async function deleteReaction(token: string, channelId, messageId, reactionId) {
+    return await fetch(`${API}/api/channels/${channelId}/messages/${messageId}/reactions/${reactionId}`, {
         method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+}
+
+export async function globalSearch(token, searchTerm) {
+    const response = await fetch(`${API}/api/search?term=${searchTerm}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    });
+    return response.json();
+}
+
+export async function getChatWithUser(token, userId) {
+    return await fetch(`${API}/api/contacts/${userId}/chat`, {
+        method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`
         }

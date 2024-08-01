@@ -13,7 +13,7 @@ use futures::{sink::SinkExt, stream::StreamExt};
 use prost::Message;
 use tokio::sync::mpsc::Receiver;
 
-use crate::entity::user::User;
+use crate::schema::users::User;
 use crate::server::gateway::Gateway;
 use crate::server::messages::{encode_packet_message, Packet, PacketMessage};
 use crate::SharedState;
@@ -41,7 +41,7 @@ pub async fn subscribe_chat_handshake(
     };
     let (tx, rx) = tokio::sync::mpsc::channel(100);
     {
-        state.write().await.packet_queue.insert(user.id, tx);
+        state.write().await.packet_queue.insert(user.user_id, tx);
     }
     println!("`{user_agent}` at {addr} connected.");
     let response = ws.on_upgrade(move |socket| subscribe_chat(user, state, rx, socket, addr));

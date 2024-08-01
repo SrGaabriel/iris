@@ -1,21 +1,19 @@
 use diesel::pg::Pg;
-use diesel::sql_types::{Nullable, Text, BigInt, SmallInt};
+use diesel::sql_types::{Nullable, Text, BigInt, SmallInt, VarChar};
 use diesel::{allow_tables_to_appear_in_same_query, Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
-use crate::entity::user::users;
+use crate::schema::users::users;
 use crate::User;
 use diesel::sql_types::Bool;
-
-pub type ContextType = i16;
 
 #[derive(Queryable, Identifiable, Associations, Selectable, Insertable)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = messages)]
+#[primary_key(message_id)]
 pub struct Message {
-    pub id: i64,
+    pub message_id: i64,
     pub user_id: i64,
     pub content: String,
-    pub context: i64,
-    pub context_type: ContextType,
+    pub channel_id: i64,
     pub reception_status: i16,
     pub edited: bool,
     pub reply_to: Option<i64>
@@ -24,12 +22,11 @@ pub struct Message {
 diesel::table! {
     use diesel::sql_types::*;
 
-    messages (id) {
-        id -> BigInt,
+    messages (message_id) {
+        message_id -> BigInt,
         user_id -> BigInt,
         content -> Text,
-        context -> BigInt,
-        context_type -> SmallInt,
+        channel_id -> BigInt,
         reception_status -> SmallInt,
         edited -> Bool,
         reply_to -> Nullable<BigInt>
@@ -38,15 +35,12 @@ diesel::table! {
 
 diesel::joinable!(messages -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(
-    users,
-    messages,
-);
-
 #[derive(QueryableByName, Queryable, Debug)]
-pub struct ContactWithLastMessage {
+pub struct ContactWithChannel {
     #[sql_type = "BigInt"]
-    pub id: i64,
+    pub user_id: i64,
+    #[sql_type = "BigInt"]
+    pub channel_id: i64,
     #[sql_type = "Text"]
     pub name: String,
     #[sql_type = "Text"]
@@ -58,25 +52,29 @@ pub struct ContactWithLastMessage {
     #[sql_type = "Nullable<SmallInt>"]
     pub reception_status: Option<i16>,
     #[sql_type = "BigInt"]
-    pub reception_status_count: i64
+    pub unread_reception_count: i64
 }
 
 #[derive(QueryableByName, Queryable, Debug)]
 pub struct CompleteMessage {
     #[sql_type = "BigInt"]
-    pub id: i64,
+    pub message_id: i64,
     #[sql_type = "BigInt"]
     pub user_id: i64,
     #[sql_type = "Text"]
     pub content: String,
     #[sql_type = "BigInt"]
-    pub context: i64,
+    pub channel_id: i64,
     #[sql_type = "SmallInt"]
     pub reception_status: i16,
     #[sql_type = "Bool"]
     pub edited: bool,
     #[sql_type = "Nullable<BigInt>"]
     pub reply_to: Option<i64>,
+    #[sql_type = "VarChar"]
+    pub author_name: String,
+    #[sql_type = "VarChar"]
+    pub author_username: String,
     #[sql_type = "Text"]
     pub reactions: String
 }
