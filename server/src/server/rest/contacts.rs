@@ -1,15 +1,15 @@
 use axum::body::Body;
 use axum::Extension;
 use axum::extract::Path;
-use axum::http::Request;
+use axum::http::{Request, StatusCode};
 use diesel::prelude::*;
 use diesel::row::NamedRow;
 use diesel::{debug_query, RunQueryDsl, sql_query};
 use diesel::sql_types::BigInt;
-
+use crate::schema::channels::{Channel, PrivateChannelQuery};
 use crate::schema::messages::ContactWithChannel;
 use crate::schema::users::User;
-use crate::server::rest::{ContactResponse, IrisResponse, ok, PrimordialMessage};
+use crate::server::rest::{ContactResponse, error, IrisResponse, ok, PrimordialMessage, PrivateChannel};
 use crate::SharedState;
 
 // For the time being, we will return all registered users as contacts
@@ -152,4 +152,64 @@ pub async fn get_contact(
     };
 
     ok(result)
+}
+
+// This will simply return the channel between the two users if it exists, or create it if it doesn't
+pub async fn chat(
+    Path(contact_id): Path<i64>,
+    Extension(state): Extension<SharedState>,
+    request: Request<Body>
+) -> IrisResponse<PrivateChannel> {
+    let user = request.extensions().get::<User>().cloned().expect("User not found");
+    let state = &mut state.write().await;
+
+    let snowflake_id = {
+        &state.snowflake_issuer.generate()
+    };
+
+    let query = sql_query(r#"
+    WITH existing_channel AS (
+        SELECT cm1.channel_id
+        FROM channel_members cm1
+        JOIN channel_members cm2 ON cm1.channel_id = cm2.channel_id
+        JOIN channels c ON cm1.channel_id = c.channel_id
+        WHERE cm1.user_id = $1
+        AND cm2.user_id = $2
+        AND c.channel_type = 0
+    ), inserted_channel AS (
+        INSERT INTO channels (channel_id, channel_type)
+        SELECT $3, 0
+        WHERE NOT EXISTS (SELECT 1 FROM existing_channel)
+        RETURNING channel_id
+    ), new_channel_member1 AS (
+        INSERT INTO channel_members (channel_id, user_id)
+        SELECT channel_id, $1
+        FROM inserted_channel
+        RETURNING channel_id
+    ), new_channel_member2 AS (
+        INSERT INTO channel_members (channel_id, user_id)
+        SELECT channel_id, $2
+        FROM inserted_channel
+        RETURNING channel_id
+    )
+    SELECT channel_id FROM existing_channel
+    UNION ALL
+    SELECT channel_id FROM inserted_channel
+    UNION ALL
+    SELECT channel_id FROM new_channel_member1
+    UNION ALL
+    SELECT channel_id FROM new_channel_member2
+    LIMIT 1;
+    "#).bind::<BigInt, _>(user.user_id).bind::<BigInt, _>(contact_id).bind::<BigInt, _>(snowflake_id.value() as i64);
+    let channel_id_result = query.load::<PrivateChannelQuery>(&mut state.database);
+
+    if channel_id_result.is_err() {
+        channel_id_result.unwrap();
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to get channel");
+    }
+
+    let channel = channel_id_result.unwrap().into_iter().next().expect("Channel not found");
+    ok(PrivateChannel {
+        channel_id: channel.channel_id
+    })
 }

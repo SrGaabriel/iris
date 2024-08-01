@@ -11,6 +11,7 @@ pub mod user;
 pub mod middlewares;
 pub mod messages;
 pub(crate) mod reactions;
+pub(crate) mod search;
 
 pub type IrisResponse<T> = (StatusCode, Either<Json<T>, Json<IrisError>>);
 
@@ -107,4 +108,14 @@ pub struct ReactionAddRequest {
 pub struct ReactionAddResponse {
     pub reaction_id: i32,
     pub reaction_count: i32
+}
+
+#[derive(Serialize)]
+pub struct GeneralSearchResponse {
+    pub users: Vec<StandardUser>
+}
+
+#[derive(Serialize)]
+pub struct PrivateChannel {
+    pub channel_id: i64
 }

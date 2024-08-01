@@ -95,3 +95,22 @@ export async function deleteReaction(token: string, channelId, messageId, reacti
         }
     });
 }
+
+export async function globalSearch(token, searchTerm) {
+    const response = await fetch(`${API}/api/search?term=${searchTerm}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        }
+    });
+    return response.json();
+}
+
+export async function getChatWithUser(token, userId) {
+    return await fetch(`${API}/api/contacts/${userId}/chat`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+}

@@ -66,6 +66,7 @@
 
     function onTyping(message) {
         if (!message) return;
+        if (message.user.id === data.user.id) return;
         const previousTyping = typing[message.channel_id];
         if (previousTyping) {
             previousTyping.filter((typing) => {

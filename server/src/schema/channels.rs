@@ -1,4 +1,5 @@
-use diesel::{Identifiable, Queryable, Selectable, table};
+use diesel::sql_types::BigInt;
+use diesel::{Identifiable, Queryable, QueryableByName, Selectable, table};
 use crate::schema::users::users;
 
 #[derive(Queryable, Identifiable)]
@@ -34,3 +35,9 @@ table! {
 
 diesel::joinable!(channel_members -> channels (channel_id));
 diesel::joinable!(channel_members -> users (user_id));
+
+#[derive(Queryable, QueryableByName)]
+pub struct PrivateChannelQuery {
+    #[sql_type = "BigInt"]
+    pub channel_id: i64
+}

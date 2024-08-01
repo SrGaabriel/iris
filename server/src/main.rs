@@ -68,9 +68,11 @@ async fn main() {
 
     let app = Router::new()
         .route("/ws", get(server::subscribe_chat_handshake))
+        .route("/api/search", post(server::rest::search::search))
         .route("/api/users/@me", get(server::rest::user::get_self))
         .route("/api/contacts/@me", get(server::rest::contacts::get_contacts))
         .route("/api/contacts/:contact_id", get(server::rest::contacts::get_contact))
+        .route("/api/contacts/:contact_id/chat", post(server::rest::contacts::chat))
         .route("/api/channels/:channel_id/messages", post(server::rest::messages::create_message))
         .route("/api/channels/:channel_id/messages", get(server::rest::messages::get_messages))
         .route("/api/channels/:channel_id/messages/:message_id", put(server::rest::messages::edit_message))
