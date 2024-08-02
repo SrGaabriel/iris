@@ -19,9 +19,10 @@
     onMount(() => {
         messageStore.subscribe((message) => {
             if (!message) return;
-            else if (message.userId === selfId && message.context === user.id) {
+            if (message.channel_id !== user.channel_id) return;
+            if (message.user_id === selfId) {
                 lastMessage = message;
-            } else if (message.userId === user.id && message.context === selfId) {
+            } else if (message.user_id === user.id) {
                 lastMessage = message;
                 if (!isSelected) {
                     unreadCount++;

@@ -1,6 +1,5 @@
 
 use diesel::allow_tables_to_appear_in_same_query;
-use serde::Serialize;
 
 pub mod users;
 pub mod messages;

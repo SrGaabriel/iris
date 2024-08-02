@@ -1,5 +1,4 @@
 use iris_macros::packet;
-use serde::{Deserialize, Serialize};
 use crate::server::rest::{MessageObject, StandardUser};
 // SERVERBOUND
 

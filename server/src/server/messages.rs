@@ -1,4 +1,3 @@
-use iris_macros::packet;
 use prost::Message;
 
 pub trait Packet {

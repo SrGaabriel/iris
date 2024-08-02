@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::http::{Request, StatusCode};
 use diesel::{Connection, OptionalExtension, RunQueryDsl};
 
-use crate::schema::reactions::{Reaction, ReactionInsert, ReactionUser, ReactionUserInsert};
+use crate::schema::reactions::{ReactionInsert, ReactionUserInsert};
 use crate::schema::reactions::reactions::dsl::reactions as reactionsTable;
 use crate::schema::reactions::reaction_users::dsl::reaction_users as reactionUsersTable;
 use crate::schema::reactions::reaction_users::reaction_id as reactionUsersTableReactionId;
@@ -14,11 +14,9 @@ use crate::schema::users::User;
 use crate::server::rest::{error, IrisResponse, no_content, ok, ReactionAddRequest, ReactionAddResponse};
 use crate::SharedState;
 use http_body_util::BodyExt;
-use diesel::QueryDsl;
 use diesel::ExpressionMethods;
-use futures_util::FutureExt;
 use crate::schema::reactions::reaction_users::user_id;
-use crate::server::gateway::context::{send_packet_to_channel, send_packet_to_context};
+use crate::server::gateway::context::{send_packet_to_channel};
 use crate::server::gateway::messages::{ReactionAdded, ReactionRemoved};
 
 pub async fn add_reaction(
@@ -83,7 +81,7 @@ pub async fn add_reaction(
                 user_id: user.user_id,
             };
 
-            let user_query = diesel::insert_into(reactionUsersTable)
+            diesel::insert_into(reactionUsersTable)
                 .values(&reaction_user)
                 .execute(connection)?;
             Ok((message_reaction_id, count))
@@ -134,7 +132,7 @@ pub async fn remove_reaction(
                 .filter(reactionUsersTableReactionId.eq(reaction_identifier))
                 .filter(user_id.eq(user.user_id))
                 .execute(connection)?;
-            Ok((count))
+            Ok(count)
         })
     };
 

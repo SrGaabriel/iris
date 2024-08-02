@@ -1,9 +1,8 @@
-use std::ops::Deref;
 use tokio::sync::RwLockWriteGuard;
 use async_trait::async_trait;
-use crate::{AppState, SharedState};
+use crate::{AppState};
 use crate::schema::users::User;
-use crate::server::messages::{Packet, PacketMessage, PacketStaticId};
+use crate::server::messages::PacketMessage;
 
 pub mod receipts;
 pub mod typing;

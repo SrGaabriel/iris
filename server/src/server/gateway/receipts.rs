@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use tokio::sync::RwLockWriteGuard;
 
 use crate::AppState;

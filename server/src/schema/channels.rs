@@ -3,16 +3,16 @@ use diesel::{Identifiable, Queryable, QueryableByName, Selectable, table};
 use crate::schema::users::users;
 
 #[derive(Queryable, Identifiable)]
-#[table_name = "channels"]
-#[primary_key(channel_id)]
+#[diesel(table_name = channels)]
+#[diesel(primary_key(channel_id))]
 pub struct Channel {
     pub channel_id: i64,
     pub channel_type: i32,
 }
 
 #[derive(Queryable, Identifiable, Selectable)]
-#[table_name = "channel_members"]
-#[primary_key(channel_id, user_id)]
+#[diesel(table_name = channel_members)]
+#[diesel(primary_key(channel_id, user_id))]
 pub struct ChannelMember {
     pub channel_id: i64,
     pub user_id: i64
@@ -38,6 +38,6 @@ diesel::joinable!(channel_members -> users (user_id));
 
 #[derive(Queryable, QueryableByName)]
 pub struct PrivateChannelQuery {
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub channel_id: i64
 }

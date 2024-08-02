@@ -7,8 +7,6 @@ use axum::extract::ws::WebSocket;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
-use diesel::{BoolExpressionMethods, QueryDsl, RunQueryDsl};
-use diesel::ExpressionMethods;
 use futures::{sink::SinkExt, stream::StreamExt};
 use prost::Message;
 use tokio::sync::mpsc::Receiver;
@@ -49,24 +47,41 @@ pub async fn subscribe_chat_handshake(
     return (StatusCode::SWITCHING_PROTOCOLS, [("Sec-WebSocket-Protocol", "Token")], response);
 }
 
-pub async fn subscribe_chat(connected_user: User, application: SharedState, mut rx: Receiver<Box<dyn Packet + Send>>, mut ws: WebSocket, addr: SocketAddr) {
+pub async fn subscribe_chat(connected_user: User, application: SharedState, mut rx: Receiver<Box<dyn Packet + Send>>, ws: WebSocket, addr: SocketAddr) {
     let (mut sender, mut receiver) = ws.split();
 
-    let send_task = tokio::spawn(async move {
+    let mut send_task = tokio::spawn(async move {
         while let Some(bytes) = rx.recv().await {
             sender.send(Binary(encode_packet_message(bytes))).await.unwrap();
         }
     });
 
-    let receive_task = tokio::spawn(async move {
+    let mut receive_task = tokio::spawn(async move {
         while let Some(Ok(Binary(binary))) = receiver.next().await {
             let packet = PacketMessage::decode(binary.as_slice()).unwrap();
             let mut state = application.write().await;
-            let mut temp_gateway = std::mem::replace(&mut state.gateway, Gateway::new());
+            let temp_gateway = std::mem::replace(&mut state.gateway, Gateway::new());
             temp_gateway.handle_packet(&connected_user, &mut state, &packet).await;
             state.gateway = temp_gateway;
         }
     });
+
+    tokio::select! {
+        rv_a = (&mut send_task) => {
+            match rv_a {
+                Ok(()) => println!("Finished message stream to {addr}"),
+                Err(a) => println!("Error sending messages {a:?}")
+            }
+            receive_task.abort();
+        },
+        rv_b = (&mut receive_task) => {
+            match rv_b {
+                Ok(()) => println!("Received in total messages from {addr}"),
+                Err(b) => println!("Error receiving messages {b:?}")
+            }
+            send_task.abort();
+        }
+    }
 
     println!("Disconnected!");
 }

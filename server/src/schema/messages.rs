@@ -1,6 +1,5 @@
-use diesel::pg::Pg;
 use diesel::sql_types::{Nullable, Text, BigInt, SmallInt, VarChar};
-use diesel::{allow_tables_to_appear_in_same_query, Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
+use diesel::{Associations, Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use crate::schema::users::users;
 use crate::User;
 use diesel::sql_types::Bool;
@@ -8,7 +7,7 @@ use diesel::sql_types::Bool;
 #[derive(Queryable, Identifiable, Associations, Selectable, Insertable)]
 #[diesel(belongs_to(User))]
 #[diesel(table_name = messages)]
-#[primary_key(message_id)]
+#[diesel(primary_key(message_id))]
 pub struct Message {
     pub message_id: i64,
     pub user_id: i64,
@@ -37,44 +36,44 @@ diesel::joinable!(messages -> users (user_id));
 
 #[derive(QueryableByName, Queryable, Debug)]
 pub struct ContactWithChannel {
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub user_id: i64,
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub channel_id: i64,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub name: String,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub username: String,
-    #[sql_type = "Nullable<BigInt>"]
+    #[diesel(sql_type = Nullable<BigInt>)]
     pub message_id: Option<i64>,
-    #[sql_type = "Nullable<Text>"]
+    #[diesel(sql_type = Nullable<Text>)]
     pub content: Option<String>,
-    #[sql_type = "Nullable<SmallInt>"]
+    #[diesel(sql_type = Nullable<SmallInt>)]
     pub reception_status: Option<i16>,
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub unread_reception_count: i64
 }
 
 #[derive(QueryableByName, Queryable, Debug)]
 pub struct CompleteMessage {
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub message_id: i64,
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub user_id: i64,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub content: String,
-    #[sql_type = "BigInt"]
+    #[diesel(sql_type = BigInt)]
     pub channel_id: i64,
-    #[sql_type = "SmallInt"]
+    #[diesel(sql_type = SmallInt)]
     pub reception_status: i16,
-    #[sql_type = "Bool"]
+    #[diesel(sql_type = Bool)]
     pub edited: bool,
-    #[sql_type = "Nullable<BigInt>"]
+    #[diesel(sql_type = Nullable<BigInt>)]
     pub reply_to: Option<i64>,
-    #[sql_type = "VarChar"]
+    #[diesel(sql_type = VarChar)]
     pub author_name: String,
-    #[sql_type = "VarChar"]
+    #[diesel(sql_type = VarChar)]
     pub author_username: String,
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub reactions: String
 }

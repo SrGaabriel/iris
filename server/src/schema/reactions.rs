@@ -1,7 +1,7 @@
-use diesel::{allow_tables_to_appear_in_same_query, Identifiable, Insertable, Queryable, Selectable};
+use diesel::{Identifiable, Insertable, Queryable, Selectable};
 use crate::schema::messages::messages;
 use crate::schema::users::users;
-use diesel::sql_types::{BigInt, Text, Varchar, Integer, Bool, Serial};
+use diesel::sql_types::{Text, Integer, Bool, Serial};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -65,13 +65,13 @@ pub struct ReactionUserInsert {
 
 #[derive(Debug, Serialize, Deserialize, QueryableByName, Clone, PartialEq)]
 pub struct ReactionSummary {
-    #[sql_type = "Text"]
+    #[diesel(sql_type = Text)]
     pub emoji: String,
-    #[sql_type = "Integer"]
+    #[diesel(sql_type = Integer)]
     pub count: i32,
-    #[sql_type = "Bool"]
+    #[diesel(sql_type = Bool)]
     pub me: bool,
-    #[sql_type = "Serial"]
+    #[diesel(sql_type = Serial)]
     pub reaction_id: i32
 }
 

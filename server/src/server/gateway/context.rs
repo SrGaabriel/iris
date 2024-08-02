@@ -9,20 +9,6 @@ use crate::schema::channels::channel_members::dsl::channel_members;
 use crate::schema::channels::channel_members::{channel_id as table_channel_id, user_id};
 use crate::server::messages::Packet;
 
-#[deprecated]
-pub async fn send_packet_to_context(packet_queue: &mut DashMap<i64, Sender<Box<dyn Packet + Send>>>, context: i64, packet: Box<dyn Packet + Send>) {
-    println!("Sending packet to context: {}", context);
-    if let Some(tx) = packet_queue.get(&context) {
-        println!("Context was found, now sending packet");
-        tx.send(packet).then(|result| {
-            if let Err(e) = result {
-                eprintln!("Failed to send message: {:?}", e);
-            }
-            futures_util::future::ready(())
-        }).await;
-    }
-}
-
 pub async fn send_packet_to_channel<F>(
     lock: &mut RwLockWriteGuard<'_, AppState>,
     channel_id: i64,

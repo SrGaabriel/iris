@@ -2,22 +2,19 @@ use axum::{debug_handler, Extension, Json};
 use axum::body::Body;
 use axum::extract::Path;
 use axum::http::{Request, StatusCode};
-use diesel::{debug_query, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, sql_query, Table};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, sql_query, Table};
 use diesel::dsl::{exists};
-use diesel::pg::Pg;
 use diesel::sql_types::{BigInt, Bool, Nullable, SmallInt, Text};
-use diesel::prelude::*;
-use futures_util::FutureExt;
 use http_body_util::BodyExt;
 use serde::Deserialize;
 use crate::schema::channels::channel_members::dsl::channel_members;
 use crate::schema::ctes::select_messages_from;
 use crate::schema::messages::{CompleteMessage, Message};
-use crate::schema::messages::messages::{content, channel_id as messageChannelId, edited, message_id as messageId, user_id};
+use crate::schema::messages::messages::{channel_id as messageChannelId, message_id as messageId, user_id};
 use crate::schema::messages::messages::dsl::messages as messagesTable;
 use crate::schema::messages::messages::dsl::messages;
 use crate::schema::users::User;
-use crate::server::gateway::context::{send_packet_to_channel, send_packet_to_context};
+use crate::server::gateway::context::{send_packet_to_channel};
 use crate::server::gateway::messages::{MessageCreated, MessageDeleted, MessageEdited};
 use crate::server::rest::{error, IrisResponse, MessageObject, no_content, ok, StandardUser};
 use crate::SharedState;
@@ -159,11 +156,6 @@ pub async fn edit_message(
         return error(StatusCode::BAD_REQUEST, "Invalid message")
     }
     let message: Json<MessageCreationRequest> = message.unwrap();
-
-    let query = messages
-        .filter(messageChannelId.eq(channel_id))
-        .filter(messageId.eq(message_id))
-        .filter(user_id.eq(user.user_id));
 
     let new_content = message.0.content;
     let mut state = state.write().await;

@@ -16,9 +16,6 @@ use crate::schema::users::users::user_id as table_user_id;
 use crate::server::rest::error;
 use crate::SharedState;
 
-#[derive(Clone, Copy)]
-pub struct IrisAuth;
-
 pub async fn authorize(mut req: Request, next: Next) -> Response {
     let headers = req.headers().clone();
     let auth = headers.get("Authorization").or(headers.get("Sec-Websocket-Protocol"));
@@ -37,7 +34,7 @@ pub async fn authorize(mut req: Request, next: Next) -> Response {
         return error::<String>(StatusCode::UNAUTHORIZED, "Invalid token").into_response();
     }
 
-    let mut extensions = req.extensions_mut();
+    let extensions = req.extensions_mut();
     let user = {
         let mut state = extensions.get_mut::<SharedState>().unwrap().write().await;
         let claims: Result<BTreeMap<String, i64>, jwt::error::Error> = token.unwrap().verify_with_key(&state.jwt_key);

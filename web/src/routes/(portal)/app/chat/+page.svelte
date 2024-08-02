@@ -6,17 +6,15 @@
     import TargetedStore from '../../../../util/targetedStore.ts';
     import {
         CONTACT_TYPING_ID,
-        CHANNEL_READ_ID,
         MESSAGE_CREATED_ID
     } from "$lib/network/message.ts";
     import {TYPING_DELAY} from "$lib/constants.ts";
-    import {fetchContacts} from "$lib/network/api.ts"
     import Chat from "$lib/components/Chat.svelte";
     import PortalLayout from "../PortalLayout.svelte";
     import {pushState} from "$app/navigation";
 
     export let data;
-    let contacts = [];
+    let contacts = data.contacts;
     let messageStore = writable();
     let keydownStore = new TargetedStore();
     $: typing = {};
@@ -25,29 +23,19 @@
     let contactSearch = '';
 
     onMount(() => {
-        loadContacts();
-
+        if (data.requestedContactChannelId) {
+            let foundContact = contacts.find(contact =>
+                contact.channel_id === data.requestedContactChannelId
+            );
+            if (foundContact) {
+                selectedContact = foundContact;
+                pushState(`/app/chat/${data.requestedContactChannelId}`, null);
+            }
+        }
         server.connect(data.token);
         server.store.subscribe(MESSAGE_CREATED_ID, onMessageCreated);
         server.store.subscribe(CONTACT_TYPING_ID, onTyping);
     });
-
-    function loadContacts() {
-        fetchContacts(data.token).then(contact_list => {
-            contacts = contact_list;
-            return contact_list;
-        }).then((contact_list) => {
-            if (data.requestedContactChannelId) {
-                let foundContact = contact_list.find(contact =>
-                    contact.channel_id === parseInt(data.requestedContactChannelId)
-                );
-                if (foundContact) {
-                    selectedContact = foundContact;
-                    pushState(`/app/chat/${data.requestedContactChannelId}`, null);
-                }
-            }
-        });
-    }
 
     function onMessageCreated(create) {
         const message = create.message;

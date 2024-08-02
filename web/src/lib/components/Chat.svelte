@@ -453,7 +453,7 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        height: 75vh;
+        height: 77vh;
         padding-top: 32px;
         overflow-x: hidden;
         overflow-y: auto;
@@ -478,7 +478,6 @@
         box-shadow: 0 0 2px 0 var(--reply-color);
         padding: 4px;
         background-color: var(--background);
-        margin-bottom: 48px;
     }
     .replying-to {
         position: absolute;
